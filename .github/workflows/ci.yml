@@ -10,7 +10,7 @@ name: CI
 jobs:
   quality:
     name: Qualité (lint, format, type check, tests)
-    runs-on: ubuntu-latest
+    runs-on: self-hosted,linux,maison
 
     steps:
       - name: Checkout du dépôt
