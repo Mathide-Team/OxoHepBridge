@@ -10,7 +10,7 @@ name: CI
 jobs:
   quality:
     name: Qualité (lint, format, type check, tests)
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.RUNS_ON_LINUX || '{"group":"maison","labels":["self-hosted","linux"]}') }}
 
     steps:
       - name: Checkout du dépôt

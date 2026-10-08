@@ -1,0 +1,397 @@
+Metadata-Version: 2.4
+Name: oxo-hep-bridge
+Version: 0.1.0
+Summary: Pont Alcatel OXO (UA/UAUDP/UA3G/NOE) vers HOMER via tshark -T ek + HEP/EEP
+Author: yves deuscher
+License: MIT
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: loguru>=0.7
+Provides-Extra: dev
+Requires-Dist: ruff>=0.6; extra == "dev"
+Requires-Dist: mypy>=1.10; extra == "dev"
+Requires-Dist: pytest>=8; extra == "dev"
+Requires-Dist: pytest-cov>=5; extra == "dev"
+Requires-Dist: pre-commit>=3.7; extra == "dev"
+Dynamic: license-file
+
+# oxo-hep-bridge
+
+Capture le trafic de téléphonie Alcatel OXO (protocoles UA / UAUDP / UA3G / NOE),
+le décode avec `tshark -T ek`, normalise les champs, les encapsule en **HEPv3**
+(Homer Encapsulation Protocol) et les envoie vers un collecteur **HOMER** /
+**heplify-server**.
+
+- Aucune dépendance lourde : pas de pyshark, pas de scapy. Seul le binaire `tshark`
+  est invoqué via subprocess.
+- Encodeur HEPv3 100 % Python (aucune lib externe pour l'encodage binaire).
+- Mode capture live (`--interface`) ou relecture hors-ligne (`--pcap`).
+- Mode dry-run (`--dry-run`) pour valider l'encodage sans envoyer sur le réseau.
+- Payload sémantique : champs UAUDP (opcode, sntseq, expseq), endpoints (IP+port),
+  QoS (opcode 0), métriques réseau brutes et événements NOE extraits en JSON structuré.
+- Libellés protocolaires officiels ajoutés en plus des valeurs numériques quand
+  résolvables (`opcode_name`, `class_name`, `method_name`, `event_name`...),
+  sourcés depuis le dissecteur Wireshark officiel Alcatel-Lucent Enterprise —
+  voir [docs/noe-ua3g-homer-mapping.md](docs/noe-ua3g-homer-mapping.md#6bis-mise-à-jour-nommage-protocolaire-désormais-sourcé).
+- Corrélation stateless : identifiant A→B = B→A (endpoints triés), utilisable sans
+  état partagé entre plusieurs instances du pont.
+- Harnais de réception HEP standalone (`tools/hep_receiver.py`) pour valider
+  l'encodage de bout en bout sans instance HOMER réelle (round-trip encode →
+  réseau → decode indépendant).
+- Observabilité : compteurs de fin de run (reçus / envoyés / ignorés / erreurs)
+  avec taux de succès.
+- Arrêt propre sur SIGINT (Ctrl-C) **et** SIGTERM (`systemctl stop`/redémarrage
+  de service) : fermeture du subprocess tshark, de la socket UDP et du
+  keepalive, résumé de stats avant de quitter.
+- Keepalive HEP périodique (`--keepalive-interval`) en capture live : signale
+  à HOMER/heplify-server que l'agent est actif même sans trafic OXO (chunk
+  HEP `KEEPALIVE_TIMER` 0x000D + payload JSON de marquage `"type":"keepalive"`).
+- Collecteur HEP (`--hep-host`) joignable en IPv4, IPv6 ou par nom DNS :
+  la famille de socket est résolue automatiquement (`getaddrinfo`), sans
+  configuration supplémentaire.
+- Transport HEP configurable (`--hep-transport`) : UDP (défaut), TCP ou
+  TCP+TLS — utile derrière un pare-feu qui bloque l'UDP sortant, ou pour
+  chiffrer le trafic HEP en transit. Vérification de certificat activée par
+  défaut, désactivable explicitement pour un labo (`--hep-tls-insecure`),
+  avec CA personnalisée optionnelle (`--hep-tls-ca-file`).
+- Compression gzip optionnelle du payload (`--hep-compress-payload`, chunk
+  HEP 0x0010) — **non compatible avec HOMER11 en l'état** (vérifié dans son
+  code source, voir [docs/hep-chunks.md](docs/hep-chunks.md#compression-du-payload-chunk-0x0010)) ;
+  désactivée par défaut, avertissement explicite si activée.
+- Retry avec backoff exponentiel sur échec d'envoi (`--hep-retries`,
+  `--hep-retry-backoff`) : une coupure réseau brève vers le collecteur (UDP,
+  TCP ou TLS) n'entraîne plus la perte du paquet — désactivé par défaut
+  (comportement historique inchangé).
+- Fréquence du log de progression configurable (`--stats-interval`) : utile
+  pour suivre un flux à faible débit sans attendre 500 paquets envoyés
+  (défaut historique inchangé), ou pour couper ce log intermédiaire
+  (`--stats-interval 0`) sans toucher au résumé de fin de run.
+- Sortie JSON Lines structurée optionnelle (`--log-json-file`) : chaque
+  enregistrement résumé de fin de run/log de progression y porte le détail
+  complet des compteurs (`record.extra.stats`), en plus de la sortie
+  stderr texte habituelle — utile pour un pipeline de supervision qui
+  consomme du JSON (Loki, ELK, etc.) plutôt que du texte.
+- Validation explicite du fichier TOML (`--config`) : une table ou une clé
+  inconnue (typo, clé écrite hors de sa section `[table]`) fait échouer le
+  démarrage avec un message ciblé plutôt que de démarrer en silence avec des
+  valeurs par défaut inattendues.
+- Intégration `sd_notify` systemd : `READY=1` au démarrage, `STOPPING=1` à
+  l'arrêt, et `WATCHDOG=1` périodique si `WatchdogSec=` est configuré côté
+  unité — permet à systemd de superviser l'état du service au-delà du
+  simple code de sortie (`Type=notify` dans `systemd/oxo-hep-bridge.service`,
+  voir les limites de ce que le watchdog détecte dans
+  [docs/architecture.md](docs/architecture.md#notification-systemd-sd_notify-et-watchdog)).
+- Tests automatisés sur les fixtures issues des captures officielles Wireshark.
+- CI durcie : `ruff check`/`ruff format`, contrôle de type statique (`mypy`,
+  périmètre `src/oxo_hep_bridge` + `tools/`) et seuil de couverture minimal
+  (`--cov-fail-under=80`) sur chaque push/PR.
+
+## Installation
+
+```bash
+git clone https://github.com/<user>/oxo-hep-bridge.git
+cd oxo-hep-bridge
+./install.sh
+```
+
+`install.sh` couvre Debian/Ubuntu (apt) et Rocky/RHEL 9 (dnf + EPEL). Il installe
+`tshark`, Python, [uv](https://docs.astral.sh/uv/) (gestionnaire d'environnement
+et de dépendances — installé automatiquement s'il est absent), synchronise
+l'environnement (`uv sync --extra dev`, qui crée `.venv` et installe le paquet en
+mode développement) et active les hooks pre-commit.
+
+Les commandes du projet (`make test`, `oxo-hep-bridge ...`) s'utilisent sans
+activer le venv, via `uv run <commande>` — ou en activant `.venv` comme
+d'habitude (`source .venv/bin/activate`) si tu préfères.
+
+## Utilisation
+
+### Relecture d'une capture (dry-run)
+
+```bash
+oxo-hep-bridge --pcap sample_captures/ua3g_freeseating_ipv4.pcap --dry-run
+```
+
+### Capture live avec envoi vers HOMER
+
+```bash
+oxo-hep-bridge \
+  --interface eth0 \
+  --bpf "udp port 32640" \
+  --decode-as udp.port==32640,uaudp \
+  --hep-host 192.168.1.10 --hep-port 9060 \
+  --hep-id 2001 \
+  --node-name oxo-besancon-01
+```
+
+### Envoi chiffré vers HOMER (transport TLS)
+
+```bash
+oxo-hep-bridge \
+  --interface eth0 \
+  --hep-host homer.example.com --hep-port 9060 \
+  --hep-transport tls \
+  --hep-tls-ca-file /etc/pki/homer-ca.pem \
+  --node-name oxo-besancon-01
+```
+
+Sans `--hep-tls-ca-file`, la chaîne de confiance système est utilisée. En
+labo avec un certificat auto-signé, `--hep-tls-insecure` désactive la
+vérification (jamais recommandé en production).
+
+### Résilience aux coupures réseau (retry/backoff)
+
+```bash
+oxo-hep-bridge \
+  --interface eth0 \
+  --hep-host 192.168.1.10 --hep-port 9060 \
+  --hep-retries 3 --hep-retry-backoff 0.5 \
+  --node-name oxo-besancon-01
+```
+
+Sur échec d'envoi (collecteur temporairement injoignable, socket saturée),
+le pont retente jusqu'à 3 fois avec un délai qui double à chaque essai
+(0.5s, 1s, 2s). Le paquet n'est compté en erreur (`send_errors`) que si
+toutes les tentatives échouent ; le nombre de tentatives consommées est
+reporté dans le résumé de fin de run (`send_retries`). Fonctionne avec les
+trois transports (`udp`, `tcp`, `tls`). Désactivé par défaut (`--hep-retries
+0`), comportement historique inchangé.
+
+### Diagnostic sur un flux à faible débit (fréquence du log de progression)
+
+```bash
+oxo-hep-bridge \
+  --interface eth0 \
+  --hep-host 192.168.1.10 --hep-port 9060 \
+  --stats-interval 10
+```
+
+Par défaut, la progression n'est loguée qu'après chaque tranche de 500
+paquets envoyés — sur un PABX peu chargé, cela peut ne jamais s'afficher
+avant la fin du run. `--stats-interval 10` logue toutes les 10 envois ;
+`--stats-interval 0` désactive ce log intermédiaire (seul le résumé de fin
+de run reste affiché).
+
+### Supervision structurée (sortie JSON en plus de stderr)
+
+```bash
+oxo-hep-bridge \
+  --interface eth0 \
+  --hep-host 192.168.1.10 --hep-port 9060 \
+  --log-json-file /var/log/oxo-hep-bridge/stats.json
+```
+
+Ajoute un sink JSON Lines (un objet JSON par ligne) en plus de la sortie
+stderr habituelle — toute la journalisation y est dupliquée en structuré.
+Les enregistrements résumé de fin de run et log de progression y portent en
+plus la totalité des compteurs sous `record.extra.stats` (mêmes clés que
+`Stats.to_dict()` : `received`, `sent`, `skipped`, `send_errors`,
+`send_retries`, `normalize_errors`, `tshark_errors`, `success_rate`), pas
+seulement les quelques valeurs interpolées dans le message texte. Utile pour
+un pipeline de supervision qui consomme du JSON (Loki, ELK, etc.) plutôt que
+du texte à parser. Absent par défaut (comportement historique inchangé).
+
+### Validation du fichier TOML (typo détectée au démarrage)
+
+```toml
+# config/oxo-hep-bridge.toml
+[hep]
+hots = "192.168.1.10"   # typo : "hots" au lieu de "host"
+```
+
+```bash
+oxo-hep-bridge --config config/oxo-hep-bridge.toml --interface eth0
+# configuration TOML invalide (config/oxo-hep-bridge.toml) : clé(s) TOML
+# inconnue(s) sous [hep] : hots (clés valides : auth_key, capture_agent_id,
+# ...) — typo dans config/oxo-hep-bridge.toml ?
+```
+
+Avant ce garde-fou, une telle typo était ignorée en silence : le pont
+démarrait quand même, avec `hep.host` resté à sa valeur par défaut
+(`127.0.0.1`) — un mauvais réglage indétectable sans relire le TOML ligne à
+ligne. Désormais le démarrage échoue (code de retour `2`, comme une erreur
+d'arguments CLI) avec un message ciblant la table et la clé en cause. Même
+garde-fou pour une clé placée hors de sa section `[table]` (ex: `host = ...`
+au premier niveau au lieu de sous `[hep]`) ou une table au nom mal
+orthographié (ex: `[hepp]` au lieu de `[hep]`).
+
+### Valider l'encodage sans HOMER (harnais de réception)
+
+`tools/hep_receiver.py` écoute en UDP, décode chaque paquet HEPv3 reçu avec le
+même décodeur que l'encodeur, et affiche un résumé JSONL. Idéal pour valider le
+pont dans un bac à sable sans collecteur HOMER :
+
+```bash
+# terminal 1 : récepteur de test
+python -m tools.hep_receiver --port 9060 --max 10
+
+# terminal 2 : le pont envoie vers ce récepteur
+oxo-hep-bridge --pcap sample_captures/ua3g_freeseating_ipv4.pcap \
+  --hep-host 127.0.0.1 --hep-port 9060 --node-name oxo-test-01
+```
+
+Chaque paquet décodé produit une ligne JSON du type :
+
+```json
+{"chunks":13,"src":"172.19.104.10:32640","dst":"172.19.31.87:32512",
+ "fields":{"ip_protocol_family":"IPv4","protocol_type":100,
+ "capture_agent_id":2001,"correlation_id":"172.19.104.10:32640-...",
+ "node_name":"oxo-test-01","payload":"{\"uaudp\":{\"opcode\":\"4\"},...}"},
+ "payload_bytes":311,"payload_preview":"{\"uaudp\":{...}}",
+ "from":"127.0.0.1:50773"}
+```
+
+### Options principales
+
+Priorité de résolution : options CLI (si explicitement fournies) > variables
+d'environnement (`OXOHEP_*`) > fichier TOML (`--config`) > valeurs par défaut.
+Chaque option ci-dessous (sauf `--config` lui-même) a une variable
+d'environnement équivalente.
+
+| Option            | Variable d'environnement | Description                                                        |
+| ----------------- | ------------------------- | ------------------------------------------------------------------ |
+| `--config`        | —                          | Chemin vers un fichier TOML de configuration (table/clé inconnue → erreur explicite, code 2) |
+| `--interface`     | `OXOHEP_INTERFACE`         | Interface réseau pour capture live                                 |
+| `--pcap`          | `OXOHEP_PCAP`               | Fichier .pcap à relire hors-ligne                                   |
+| `--bpf`           | `OXOHEP_BPF`                | Filtre BPF (ex: `udp port 32640`)                                   |
+| `--decode-as`     | `OXOHEP_DECODE_AS`          | Force le décodage tshark (ex: `udp.port==32640,uaudp`). Répétable côté CLI ; plusieurs règles séparées par `;` côté variable d'environnement. |
+| `--tshark-path`   | `OXOHEP_TSHARK_PATH`        | Chemin vers l'exécutable `tshark` (défaut: `tshark`, résolu via `PATH`) |
+| `--correlation-field` | `OXOHEP_CORRELATION_FIELD` | Champ tshark à utiliser comme `correlation_id` à la place du calcul par défaut (voir [docs/architecture.md](docs/architecture.md)) |
+| `--hep-host`      | `OXOHEP_HEP_HOST`           | Hôte du collecteur HOMER/heplify-server — IPv4, IPv6 ou nom DNS (défaut: 127.0.0.1) |
+| `--hep-port`      | `OXOHEP_HEP_PORT`           | Port UDP du collecteur (défaut: 9060)                              |
+| `--hep-id`        | `OXOHEP_HEP_ID`             | Capture agent ID HEP (défaut: 2001)                                 |
+| `--proto-type`    | `OXOHEP_PROTO_TYPE`         | HEP protocol type (100=LOG)                                        |
+| `--hep-pass` (alias `--hep-auth-key`) | `OXOHEP_HEP_PASS` | Clé d'authentification HEP (si NodePW configuré côté heplify-server) |
+| `--node-name`     | `OXOHEP_NODE_NAME`          | Nom du nœud / group id HEP (chunk 0x0013), visible dans HOMER     |
+| `--keepalive-interval` | `OXOHEP_KEEPALIVE_INTERVAL` | Intervalle en secondes entre deux paquets HEP keepalive en capture live (0/absent = désactivé) |
+| `--hep-transport` | `OXOHEP_HEP_TRANSPORT`      | Transport HEP : `udp` (défaut), `tcp` ou `tls`                     |
+| `--hep-tls-insecure` | `OXOHEP_HEP_TLS_VERIFY`  | Désactive la vérification du certificat serveur en transport `tls` (labo uniquement) — ⚠️ sémantique inversée côté variable d'environnement : `OXOHEP_HEP_TLS_VERIFY=0` (ou `false`) désactive la vérification, il n'existe pas de variable « insecure » dédiée |
+| `--hep-tls-ca-file` | `OXOHEP_HEP_TLS_CA_FILE`  | Fichier CA personnalisé pour vérifier le certificat du collecteur (transport `tls`) |
+| `--hep-compress-payload` | `OXOHEP_HEP_COMPRESS_PAYLOAD` | Compresse le payload HEP (gzip, chunk 0x0010) — ⚠️ non décodé par HOMER11 à ce jour, voir [docs/hep-chunks.md](docs/hep-chunks.md#compression-du-payload-chunk-0x0010) |
+| `--hep-retries`    | `OXOHEP_HEP_SEND_RETRIES`  | Nombre de tentatives supplémentaires sur échec d'envoi HEP, avec backoff exponentiel (défaut: 0, désactivé) |
+| `--hep-retry-backoff` | `OXOHEP_HEP_SEND_RETRY_BACKOFF` | Délai de base en secondes avant la 1re nouvelle tentative, doublé à chaque tentative suivante (défaut: 0.5) |
+| `--stats-interval` | `OXOHEP_STATS_INTERVAL`    | Fréquence (en paquets envoyés) du log de progression en cours de run (défaut: 500 ; `0` = désactivé) |
+| `--log-json-file` | `OXOHEP_LOG_JSON_FILE`      | Chemin de fichier : ajoute une sortie JSON Lines structurée en plus de stderr, avec le détail complet des compteurs sous `record.extra.stats` sur les enregistrements résumé/progression (absent = désactivé) |
+| `--dry-run`       | `OXOHEP_DRY_RUN`            | N'envoie rien, encode et logge seulement                           |
+| `--log-level`     | `OXOHEP_LOG_LEVEL`          | DEBUG / INFO / WARNING / ERROR                                      |
+
+## Captures d'exemple
+
+Le répertoire `sample_captures/` contient 3 captures officielles issues de
+[Wireshark Sample Captures](https://gitlab.com/wireshark/wireshark/-/wikis/SampleCaptures) :
+
+- `ua3g_freeseating_ipv4.pcap` — 64 paquets, chaîne complète `eth:ip:udp:uaudp:ua:noe`
+- `ua3g_freeseating_ipv6.pcap` — 339 paquets, même chaîne en IPv6
+- `uaudp_ipv6.pcap` — 2544 paquets (nécessite `--decode-as udp.port==32640,uaudp`)
+
+## Tests
+
+```bash
+make test          # uv run pytest
+make test-cov      # uv run pytest + couverture (échoue sous 80 %, comme la CI)
+make lint          # uv run ruff check + format --check
+make typecheck     # uv run mypy (src/oxo_hep_bridge + tools/)
+```
+
+L'environnement de développement est géré par [uv](https://docs.astral.sh/uv/) :
+`make dev` (ou `make install`, qui ajoute les hooks pre-commit) exécute `uv sync
+--extra dev`, qui crée/actualise `.venv` à partir de `pyproject.toml` et
+`uv.lock` (dépendances figées, résolution reproductible) — voir
+[docs/architecture.md](docs/architecture.md#gestion-des-dépendances-et-de-lenvironnement-uv).
+
+Les tests utilisent un `FakePopen` qui simule la sortie de `tshark -T ek` à
+partir des fixtures `.ndjson` générées à partir des captures réelles — aucun
+tshark n'est nécessaire pour exécuter la suite de tests.
+
+`make typecheck` couvre `src/oxo_hep_bridge` et `tools/` (pas `tests/`,
+volontairement — voir
+[docs/architecture.md](docs/architecture.md#contrôle-de-type-statique-mypy)).
+
+### Archive de livraison
+
+```bash
+make package       # dist/oxo-hep-bridge-{YYYYMMDD-HHMMSS}.zip
+```
+
+Ne jamais reconstruire cette archive à la main avec `zip -x` : un motif
+d'exclusion approximatif (`*.git*`, censé écarter un éventuel `.git/`)
+matche aussi `.github/` par sous-chaîne et a fait disparaître le workflow
+CI de plusieurs livraisons passées (voir `docs/pitfalls.md`). `tools/
+package.py` n'exclut que des noms de dossier exacts
+(`.git`/`.venv`/caches d'outillage) et sa liste d'exclusion est vérifiée
+par `tests/test_packaging.py`, qui construit une vraie archive et inspecte
+son contenu.
+
+## Architecture
+
+```
+tshark -T ek (subprocess)  →  parse_ek_line / flatten_layers  →  normalize  →  encode (HEPv3)  →  Sender (UDP/TCP/TLS)
+```
+
+- `src/oxo_hep_bridge/tshark_source.py` — invocation et parsing de la sortie NDJSON EK
+- `src/oxo_hep_bridge/fields.py` — fonctions utilitaires partagées (pick, as_int, as_str, extraction NOE, corrélation canonicalisée)
+- `src/oxo_hep_bridge/semantics.py` — extraction du payload sémantique UAUDP/UA3G/endpoints/QoS/NOE
+- `src/oxo_hep_bridge/ua_opcode_names.py` — dictionnaires de noms officiels UAUDP/NOE/UA3G
+  (dont les sous-commandes IP Device Routing) sourcés du dissecteur Wireshark ALE, utilisés
+  par `semantics.py` pour les champs `*_name`
+- `src/oxo_hep_bridge/normalizer.py` — transformation des champs UAUDP/UA3G/NOE en `HepPacket`
+- `src/oxo_hep_bridge/hep.py` — encodeur/décodeur HEPv3 pur Python (inclut auth_key + node_name)
+- `src/oxo_hep_bridge/sender.py` — couche d'envoi injectable (NullSender pour dry-run) ; transport UDP, TCP ou TCP+TLS configurable, résolution IPv4/IPv6/DNS de `--hep-host` via `getaddrinfo`
+- `src/oxo_hep_bridge/stats.py` — compteurs d'exécution et journalisation de synthèse
+- `src/oxo_hep_bridge/keepalive.py` — envoi périodique d'un paquet HEP de signalement de vie en capture live
+- `src/oxo_hep_bridge/sdnotify.py` — notification systemd (`sd_notify`) : `READY=1`/`STOPPING=1`/`WATCHDOG=1`
+- `src/oxo_hep_bridge/bridge.py` — orchestration source → normaliseur → encodeur → sender
+- `src/oxo_hep_bridge/cli.py` — point d'entrée en ligne de commande
+- `src/oxo_hep_bridge/config.py` — configuration (dataclass + variables d'environnement)
+- `tools/hep_receiver.py` — harnais de réception HEPv3 standalone (validation round-trip)
+
+Voir [docs/architecture.md](docs/architecture.md) pour le détail.
+
+Voir aussi [docs/noe-ua3g-homer-mapping.md](docs/noe-ua3g-homer-mapping.md)
+pour une synthèse (non officielle) sur la correspondance conceptuelle entre
+événements NOE/UA3G et messages SIP côté HOMER, et sur les limites d'un
+mapping opcode → événement métier codé en dur.
+
+Voir aussi
+[docs/ua3g-call-signaling-decroche-numerotation.md](docs/ua3g-call-signaling-decroche-numerotation.md)
+pour les vrais champs UA3G porteurs du décroché/de la numérotation
+(`ua3g.unsolicited_msg.hook_status`, `ua3g.digit_dialed.digit_value`,
+`ua3g.key_number`), la réfutation d'une hypothèse erronée reçue en session
+qui confondait ces champs avec des valeurs d'`uaudp.opcode`, et le constat
+qu'aucune capture d'exemple du dépôt ne contient de séquence d'appel
+exploitable.
+
+Voir [docs/architecture.md#limites-connues](docs/architecture.md#limites-connues)
+pour les limites connues du pont, notamment une perte de contenu NOE sur
+~16 % du trafic uaudp de la capture d'exemple `uaudp_ipv6.pcap` (163/993
+trames, opcode UAUDP ≥ 16, limite du dissecteur Wireshark upstream, pas du
+pont).
+
+Voir [docs/roadmap.md](docs/roadmap.md) pour l'état du projet et les
+features envisagées.
+
+## Déploiement systemd
+
+Un fichier d'unité est fourni dans `systemd/oxo-hep-bridge.service`. Il accorde
+les capacités `CAP_NET_RAW` et `CAP_NET_ADMIN` de façon ciblée plutôt que de
+lancer le service en root, et utilise `Type=notify` : le pont signale à
+systemd `READY=1` une fois démarré et `STOPPING=1` à l'arrêt (voir
+[docs/architecture.md](docs/architecture.md#notification-systemd-sd_notify-et-watchdog)).
+
+```bash
+sudo cp systemd/oxo-hep-bridge.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now oxo-hep-bridge
+```
+
+Watchdog optionnel : décommenter `WatchdogSec=30` dans le fichier d'unité
+pour que systemd redémarre le service si aucun `WATCHDOG=1` n'est reçu
+pendant 30 secondes (le pont notifie toutes les 15 secondes dans ce cas).
+À utiliser en connaissance de ses limites (le watchdog détecte un process
+figé ou disparu, pas un appel réseau individuellement bloqué), détaillées
+dans [docs/architecture.md](docs/architecture.md#notification-systemd-sd_notify-et-watchdog).
+
+## Licence
+
+MIT — voir [LICENSE](LICENSE).
