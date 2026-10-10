@@ -325,3 +325,15 @@ def test_outil_absent(monkeypatch):
     with pytest.raises(tool.I18nError, match="installez gettext"):
         tool.catalog_stats("de_DE")
     assert tool.main(["extract"]) == 2
+
+
+def test_comparaison_insensible_aux_coupures_de_lignes():
+    """Les versions de gettext coupent les longues chaînes à des endroits
+    différents (Plural-Forms de ru_RU sur le runner de CI) : ce n'est pas une
+    désynchronisation."""
+    coupe = 'msgstr ""\n"Plural-Forms: nplurals=3; plural=(n%10==1 && "\n"n%100!=11 ? 0 : 2);\\n"\n'
+    entier = 'msgstr ""\n"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : 2);\\n"\n'
+    assert tool._normalized(coupe) == tool._normalized(entier)
+    assert tool._normalized('"POT-Creation-Date: 2026-01-01\\n"\n') == tool._normalized(
+        '"POT-Creation-Date: 2027-02-02\\n"\n'
+    )

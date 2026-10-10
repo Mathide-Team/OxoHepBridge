@@ -97,6 +97,7 @@ def generate_pot(output: Path) -> Path:
         "--add-comments=Translators:",
         "--add-location=file",
         "--sort-by-file",
+        "--no-wrap",
         f"--package-name={DOMAIN}",
         "--msgid-bugs-address=https://github.com/Mathide-Team/OxoHepBridge/issues",
         "--output",
@@ -110,7 +111,10 @@ def generate_pot(output: Path) -> Path:
 
 
 def _normalized(text: str) -> str:
-    return _VOLATILE_HEADERS.sub("", text)
+    """Contenu comparable d'un catalogue : sans en-têtes volatils ni coupures
+    de lignes (les versions de gettext ne coupent pas les longues chaînes au
+    même endroit, ex. ``Plural-Forms`` de ru_RU)."""
+    return re.sub(r'"\n"', "", _VOLATILE_HEADERS.sub("", text))
 
 
 def _replace_if_changed(new: Path, target: Path) -> bool:
@@ -144,13 +148,16 @@ def _new_po(lang: str, po: Path) -> None:
         [
             "msginit",
             "--no-translator",
+            "--no-wrap",
             f"--locale={lang}.UTF-8",
             f"--input={POT_PATH}",
             f"--output-file={po}",
         ],
         cwd=REPO_ROOT,
     )
-    _checked(["msgfilter", "--keep-header", f"--input={po}", f"--output-file={po}", "true"])
+    _checked(
+        ["msgfilter", "--keep-header", "--no-wrap", f"--input={po}", f"--output-file={po}", "true"]
+    )
 
 
 def _merge(po: Path, pot: Path, output: Path) -> None:
@@ -161,6 +168,7 @@ def _merge(po: Path, pot: Path, output: Path) -> None:
             "--no-fuzzy-matching",
             "--add-location=file",
             "--sort-by-file",
+            "--no-wrap",
             f"--output-file={output}",
             str(po),
             str(pot),
