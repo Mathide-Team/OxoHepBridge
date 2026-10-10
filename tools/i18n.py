@@ -155,8 +155,20 @@ def _new_po(lang: str, po: Path) -> None:
         ],
         cwd=REPO_ROOT,
     )
+    # Le filtre doit lire son entrée : `true` sortait sans la lire, et
+    # msgfilter échouait par intermittence (« write to true subprocess
+    # failed: Broken pipe », vu en CI le 2026-10-10 sur la PR #55).
     _checked(
-        ["msgfilter", "--keep-header", "--no-wrap", f"--input={po}", f"--output-file={po}", "true"]
+        [
+            "msgfilter",
+            "--keep-header",
+            "--no-wrap",
+            f"--input={po}",
+            f"--output-file={po}",
+            "sh",
+            "-c",
+            "cat >/dev/null",
+        ]
     )
 
 
