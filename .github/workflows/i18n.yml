@@ -1,0 +1,98 @@
+# Internationalisation (issue #50) : vérifie que lang/messages.pot, les
+# catalogues lang/*.po et les .mo embarqués (src/oxo_hep_bridge/locale)
+# sont synchronisés avec les sources, publie le taux de traduction dans le
+# résumé du run et, sur déclenchement manuel, peut ouvrir une PR de mise à
+# jour des catalogues vers dev (msgstr vides pour les nouvelles chaînes :
+# jamais de traduction automatique).
+name: i18n
+
+"on":
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+  workflow_dispatch:
+    inputs:
+      ouvrir_pr:
+        description: "Ouvrir une PR de mise à jour des catalogues vers dev"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  catalogues:
+    name: Catalogues gettext (synchronisation + rapport)
+    runs-on: ${{ fromJSON(vars.RUNS_ON_LINUX || '{"group":"maison","labels":["self-hosted","linux"]}') }}
+
+    steps:
+      - name: Checkout du dépôt
+        uses: actions/checkout@v7
+
+      - name: Installation de uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          enable-cache: true
+
+      - name: Installation de Python
+        run: uv python install
+
+      - name: gettext (xgettext, msgmerge, msgfmt)
+        run: |
+          SUDO=""; if [ "$(id -u)" != "0" ]; then SUDO="sudo"; fi
+          command -v msgfilter >/dev/null || { $SUDO apt-get update && $SUDO env DEBIAN_FRONTEND=noninteractive apt-get install -y gettext; }
+
+      - name: Rapport de traduction
+        run: |
+          uv run --no-project python tools/i18n.py report
+          uv run --no-project python tools/i18n.py report --markdown >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Catalogues à jour (.pot, .po, .mo)
+        run: uv run --no-project python tools/i18n.py check
+
+  pr-mise-a-jour:
+    name: PR de mise à jour des catalogues (manuel)
+    if: github.event_name == 'workflow_dispatch' && inputs.ouvrir_pr
+    runs-on: ${{ fromJSON(vars.RUNS_ON_LINUX || '{"group":"maison","labels":["self-hosted","linux"]}') }}
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout de dev
+        uses: actions/checkout@v7
+        with:
+          ref: dev
+
+      - name: Installation de uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+
+      - name: gettext
+        run: |
+          SUDO=""; if [ "$(id -u)" != "0" ]; then SUDO="sudo"; fi
+          command -v msgfilter >/dev/null || { $SUDO apt-get update && $SUDO env DEBIAN_FRONTEND=noninteractive apt-get install -y gettext; }
+
+      - name: Mise à jour et compilation
+        run: |
+          uv run --no-project python tools/i18n.py update
+          uv run --no-project python tools/i18n.py compile
+
+      - name: Ouverture de la PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if git diff --quiet -- lang src/oxo_hep_bridge/locale && [ -z "$(git ls-files --others --exclude-standard lang src/oxo_hep_bridge/locale)" ]; then
+            echo "Catalogues déjà à jour, aucune PR." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          branche="i18n/mise-a-jour-${GITHUB_RUN_ID}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$branche"
+          git add lang src/oxo_hep_bridge/locale
+          git commit -m "i18n: synchronise les catalogues gettext avec les sources"
+          git push origin "$branche"
+          gh pr create --base dev --head "$branche" \
+            --title "i18n : synchronisation des catalogues gettext" \
+            --body "Généré par le workflow i18n (\`tools/i18n.py update\` + \`compile\`). Nouvelles chaînes avec \`msgstr\` vide, à traduire par une personne."

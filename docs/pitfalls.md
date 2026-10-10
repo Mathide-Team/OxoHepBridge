@@ -79,3 +79,13 @@ automatiquement à chaque démarrage de session — c'est le sens de cette liste
   `test_docs.py`), vérifier par un `grep` du nom sur tout le dépôt qu'elle
   est bien utilisée quelque part, plutôt que de supposer qu'un docstring
   qui semble sérieux est nécessairement vérifié.
+
+- Rejouer un pcap ancien vers HOMER7 sans `--pcap-retime` : heplify-server
+  reçoit tout (compteurs Prometheus à jour) mais n'insère rien, avec
+  seulement `pq: no partition of relation "hep_proto_100_default" found
+  for row` dans ses journaux. Les tables sont partitionnées autour de la
+  date du jour. Vérifié en issue #47 (`deploy/homer/README.md`).
+- Un paquet reçu par heplify-server n'est pas forcément en base : pour le
+  type LOG (100), payload **et** Correlation ID doivent être non vides.
+  D'où l'absence en base du payload compressé (`--hep-compress-payload`) et
+  du keepalive, sans aucune erreur côté collecteur (issue #47).

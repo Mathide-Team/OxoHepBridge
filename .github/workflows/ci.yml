@@ -10,7 +10,7 @@ name: CI
 jobs:
   quality:
     name: Qualité (lint, format, type check, tests)
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.RUNS_ON_LINUX || '{"group":"maison","labels":["self-hosted","linux"]}') }}
 
     steps:
       - name: Checkout du dépôt
@@ -28,6 +28,11 @@ jobs:
         # --locked : échoue si uv.lock diverge de pyproject.toml plutôt que
         # de régénérer silencieusement le lock (durcissement session 44).
         run: uv sync --locked --extra dev
+
+      - name: gettext (tests d'internationalisation, issue #50)
+        run: |
+          SUDO=""; if [ "$(id -u)" != "0" ]; then SUDO="sudo"; fi
+          command -v msgfilter >/dev/null || { $SUDO apt-get update && $SUDO env DEBIAN_FRONTEND=noninteractive apt-get install -y gettext; }
 
       - name: Lint (ruff check)
         run: uv run ruff check .

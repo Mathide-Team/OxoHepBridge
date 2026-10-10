@@ -24,6 +24,7 @@ from datetime import UTC, datetime
 from loguru import logger
 
 from oxo_hep_bridge.hep import IPV4, HepPacket, ProtoType
+from oxo_hep_bridge.i18n import _
 from oxo_hep_bridge.sender import Sender
 
 
@@ -120,7 +121,7 @@ class KeepaliveScheduler:
                     "keepalive HEP envoyé (#{}, intervalle={}s)", self.sent_count, self.interval
                 )
             else:
-                logger.warning("échec d'envoi du keepalive HEP")
+                logger.warning(_("échec d'envoi du keepalive HEP"))
 
     def start(self) -> None:
         if not self.enabled or self._thread is not None:

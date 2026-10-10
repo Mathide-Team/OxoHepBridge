@@ -1,0 +1,2 @@
+[console_scripts]
+oxo-hep-bridge = oxo_hep_bridge.cli:main

@@ -21,6 +21,8 @@ import struct
 from dataclasses import dataclass
 from typing import ClassVar
 
+from oxo_hep_bridge.i18n import _
+
 HEP3_MAGIC = b"HEP3"
 CHUNK_HEADER_FMT = struct.Struct(">HHH")  # vendor_id, chunk_type, chunk_length
 PACKET_HEADER_FMT = struct.Struct(">4sH")  # magic, total_length
@@ -143,9 +145,9 @@ def _encode_octet_string(v: bytes | str) -> bytes:
 def _encode_inet(ip: str, family: int) -> bytes:
     addr = ipaddress.ip_address(ip)
     if isinstance(addr, ipaddress.IPv6Address) and family != IPV6:
-        raise ValueError(f"IPv6 fournie mais ip_family={family}")
+        raise ValueError(_("IPv6 fournie mais ip_family={family}").format(family=family))
     if isinstance(addr, ipaddress.IPv4Address) and family != IPV4:
-        raise ValueError(f"IPv4 fournie mais ip_family={family}")
+        raise ValueError(_("IPv4 fournie mais ip_family={family}").format(family=family))
     return addr.packed
 
 
@@ -243,23 +245,27 @@ def decode(packet: bytes) -> list[tuple[int, int, bytes]]:
     Utilisé pour les tests de round-trip. Valide magic + longueur totale.
     """
     if len(packet) < PACKET_HEADER_SIZE:
-        raise ValueError("Paquet trop court pour un en-tête HEPv3")
+        raise ValueError(_("Paquet trop court pour un en-tête HEPv3"))
     magic, total_len = PACKET_HEADER_FMT.unpack(packet[:PACKET_HEADER_SIZE])
     if magic != HEP3_MAGIC:
-        raise ValueError(f"Magic HEP3 attendu, reçu {magic!r}")
+        raise ValueError(_("Magic HEP3 attendu, reçu {magic!r}").format(magic=magic))
     if total_len != len(packet):
-        raise ValueError(f"Longueur totale annoncée {total_len} ≠ {len(packet)}")
+        raise ValueError(
+            _("Longueur totale annoncée {announced} ≠ {actual}").format(
+                announced=total_len, actual=len(packet)
+            )
+        )
 
     chunks: list[tuple[int, int, bytes]] = []
     offset = PACKET_HEADER_SIZE
     while offset < total_len:
         if offset + CHUNK_HEADER_SIZE > total_len:
-            raise ValueError("En-tête de chunk tronqué")
+            raise ValueError(_("En-tête de chunk tronqué"))
         vendor, chunk_type, chunk_len = CHUNK_HEADER_FMT.unpack(
             packet[offset : offset + CHUNK_HEADER_SIZE]
         )
         if chunk_len < CHUNK_HEADER_SIZE or offset + chunk_len > total_len:
-            raise ValueError(f"Longueur de chunk invalide : {chunk_len}")
+            raise ValueError(_("Longueur de chunk invalide : {length}").format(length=chunk_len))
         payload = packet[offset + CHUNK_HEADER_SIZE : offset + chunk_len]
         chunks.append((vendor, chunk_type, payload))
         offset += chunk_len
