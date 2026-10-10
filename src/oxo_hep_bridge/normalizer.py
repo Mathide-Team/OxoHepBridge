@@ -23,6 +23,7 @@ from oxo_hep_bridge.fields import (
     pick,
 )
 from oxo_hep_bridge.hep import IPV4, IPV6, PROTO_TCP, PROTO_UDP, HepPacket, ProtoType
+from oxo_hep_bridge.i18n import _
 from oxo_hep_bridge.semantics import encode_semantic_payload
 
 __all__ = [
@@ -103,6 +104,6 @@ def _split_epoch(epoch_str: str) -> tuple[int, int]:
             s = s[:20] + s[20:26] + "Z" if s.endswith("Z") else s[:26]
         dt = datetime.fromisoformat(s.replace("Z", "+00:00"))
     except (ValueError, TypeError):
-        logger.warning("timestamp tshark invalide {!r}, fallback now", epoch_str)
+        logger.warning(_("timestamp tshark invalide {!r}, fallback now"), epoch_str)
         dt = datetime.now(UTC)
     return int(dt.timestamp()), dt.microsecond

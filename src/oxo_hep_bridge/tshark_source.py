@@ -26,6 +26,8 @@ from typing import Any
 
 from loguru import logger
 
+from oxo_hep_bridge.i18n import _
+
 
 class TsharkError(RuntimeError):
     """Levée quand le subprocess tshark se termine en erreur (code non nul)."""
@@ -43,7 +45,7 @@ def parse_ek_line(line: str) -> dict[str, Any] | None:
     try:
         obj = json.loads(line)
     except json.JSONDecodeError:
-        logger.warning("Ligne non-JSON ignorée : {!r}", line[:80])
+        logger.warning(_("Ligne non-JSON ignorée : {!r}"), line[:80])
         return None
     if not isinstance(obj, dict):
         return None
@@ -88,7 +90,7 @@ class TsharkEKSource:
         line_buffered: bool = True,
     ) -> None:
         if not interface and not pcap:
-            raise ValueError("interface ou pcap requis")
+            raise ValueError(_("interface ou pcap requis"))
         self.tshark_path = tshark_path
         self.interface = interface
         self.pcap = str(pcap) if pcap else None
@@ -142,7 +144,7 @@ class TsharkEKSource:
                 # (supprimé sous python -O), même choix que pour
                 # proc.stdout ci-dessous et pour WatchdogScheduler._run()
                 # dans sdnotify.py.
-                raise RuntimeError("proc.stderr est None malgré stderr=PIPE")
+                raise RuntimeError(_("proc.stderr est None malgré stderr=PIPE"))
             for raw in proc.stderr:
                 stderr_lines.append(raw.rstrip())
 
@@ -150,7 +152,7 @@ class TsharkEKSource:
         t.start()
 
         if proc.stdout is None:
-            raise RuntimeError("proc.stdout est None malgré stdout=PIPE")
+            raise RuntimeError(_("proc.stdout est None malgré stdout=PIPE"))
         we_interrupted = False
         try:
             for line in proc.stdout:
@@ -169,18 +171,18 @@ class TsharkEKSource:
             try:
                 proc.wait(timeout=5)
             except subprocess.TimeoutExpired:
-                logger.warning("tshark ne se termine pas, envoi de terminate()")
+                logger.warning(_("tshark ne se termine pas, envoi de terminate()"))
                 proc.terminate()
                 try:
                     proc.wait(timeout=5)
                 except subprocess.TimeoutExpired:
-                    logger.warning("tshark ne répond pas à terminate(), envoi de kill()")
+                    logger.warning(_("tshark ne répond pas à terminate(), envoi de kill()"))
                     proc.kill()
                     proc.wait(timeout=5)
             t.join(timeout=5)
             rc = proc.returncode
             if stderr_lines:
                 for msg in stderr_lines[-5:]:
-                    logger.warning("tshark stderr : {}", msg)
+                    logger.warning(_("tshark stderr : {}"), msg)
             if rc not in (0, None) and not we_interrupted:
-                raise TsharkError(f"tshark s'est terminé avec le code {rc}")
+                raise TsharkError(_("tshark s'est terminé avec le code {rc}").format(rc=rc))

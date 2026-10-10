@@ -258,6 +258,13 @@ d'environnement équivalente.
 | `--dry-run`       | `OXOHEP_DRY_RUN`            | N'envoie rien, encode et logge seulement                           |
 | `--log-level`     | `OXOHEP_LOG_LEVEL`          | DEBUG / INFO / WARNING / ERROR                                      |
 
+## Langues
+
+Les messages de la CLI sont en français par défaut et traduisibles via
+gettext (29 catalogues, liste dans `lang/LINGUAS`) ; la langue suit
+`LANGUAGE`/`LC_ALL`/`LANG`. Ajout d'une langue, traduction et
+vérifications : [docs/i18n.md](docs/i18n.md).
+
 ## Captures d'exemple
 
 Le répertoire `sample_captures/` contient 3 captures officielles issues de

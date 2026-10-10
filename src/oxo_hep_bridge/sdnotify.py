@@ -47,6 +47,8 @@ import threading
 
 from loguru import logger
 
+from oxo_hep_bridge.i18n import _
+
 
 class SdNotifier:
     """Client sd_notify minimal.
@@ -82,7 +84,7 @@ class SdNotifier:
             finally:
                 sock.close()
         except OSError as exc:
-            logger.warning("échec d'envoi de la notification sd_notify {!r} : {}", message, exc)
+            logger.warning(_("échec d'envoi de la notification sd_notify {!r} : {}"), message, exc)
             return False
         return True
 
@@ -165,7 +167,7 @@ class WatchdogScheduler:
             # satisfaire le narrowing mypy sans dépendre d'un mécanisme
             # désactivable à l'exécution.
             raise RuntimeError(
-                "_notify_every ne devrait jamais être None ici (voir enabled/start())"
+                _("_notify_every ne devrait jamais être None ici (voir enabled/start())")
             )
         while not self._stop_event.wait(self._notify_every):
             if self.notifier.watchdog():

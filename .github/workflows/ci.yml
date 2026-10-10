@@ -29,6 +29,11 @@ jobs:
         # de régénérer silencieusement le lock (durcissement session 44).
         run: uv sync --locked --extra dev
 
+      - name: gettext (tests d'internationalisation, issue #50)
+        run: |
+          SUDO=""; if [ "$(id -u)" != "0" ]; then SUDO="sudo"; fi
+          command -v msgfilter >/dev/null || { $SUDO apt-get update && $SUDO env DEBIAN_FRONTEND=noninteractive apt-get install -y gettext; }
+
       - name: Lint (ruff check)
         run: uv run ruff check .
 
