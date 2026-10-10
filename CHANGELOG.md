@@ -9,6 +9,18 @@ décisions de conception, chiffres de vérification) dans
 [`docs/sessions/`](docs/sessions/). Voir aussi
 [`docs/roadmap.md`](docs/roadmap.md) pour l'état courant du projet.
 
+## Issue #50 — 2026-10-10
+
+Internationalisation gettext sur le modèle de Gcm4 : module
+`oxo_hep_bridge.i18n` (`_()`/`ngettext()`, repli sur le français), toutes
+les chaînes utilisateur enveloppées (f-strings converties en `.format()`
+nommé), 29 catalogues `lang/*.po` (msgstr vides, aucune traduction
+automatique) listés dans `lang/LINGUAS`, `.mo` embarqués dans le paquet,
+outillage `tools/i18n.py` (`extract`/`update`/`compile`/`check`/`report`)
+et cibles `make i18n-*`, workflow `.github/workflows/i18n.yml`
+(vérification, rapport, PR optionnelle), 21 tests (`tests/test_i18n.py`).
+Détail : [docs/i18n.md](docs/i18n.md).
+
 ## Session 45 — 2026-09-15
 
 Backlog `docs/roadmap.md` § « À faire » toujours vide depuis la

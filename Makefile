@@ -17,7 +17,7 @@ MYPY ?= $(UV) run mypy
 PYTEST ?= $(UV) run pytest
 PY ?= $(UV) run python
 
-.PHONY: install dev lock lint format typecheck test test-cov package clean run-dry run-live
+.PHONY: install dev lock lint format typecheck test test-cov package clean run-dry run-live i18n-update i18n-check i18n-report
 
 install: dev
 	@$(UV) run pre-commit install
@@ -55,6 +55,18 @@ test-cov:
 # reprises par un motif d'exclusion approximatif).
 package:
 	@$(PY) tools/package.py
+
+# Internationalisation gettext (issue #50, docs/i18n.md) : nécessite les
+# outils GNU gettext (apt-get install gettext).
+i18n-update:
+	@$(PY) tools/i18n.py update
+	@$(PY) tools/i18n.py compile
+
+i18n-check:
+	@$(PY) tools/i18n.py check
+
+i18n-report:
+	@$(PY) tools/i18n.py report
 
 # Dry-run sur une capture d'exemple (sans envoyer de HEP)
 run-dry:

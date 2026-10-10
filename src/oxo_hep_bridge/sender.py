@@ -18,6 +18,7 @@ from ipaddress import AddressValueError
 from loguru import logger
 
 from oxo_hep_bridge.hep import HepPacket, encode
+from oxo_hep_bridge.i18n import _
 
 TRANSPORTS = ("udp", "tcp", "tls")
 
@@ -73,7 +74,7 @@ def _send_with_retry(
             remaining = len(delays) - attempt
             if remaining <= 0:
                 logger.error(
-                    "Échec d'envoi HEP vers {}:{}{} après {} tentative(s) : {}",
+                    _("Échec d'envoi HEP vers {}:{}{} après {} tentative(s) : {}"),
                     host,
                     port,
                     suffix,
@@ -82,7 +83,9 @@ def _send_with_retry(
                 )
                 return False, used
             logger.warning(
-                "Échec d'envoi HEP vers {}:{}{} (tentative {}/{}), nouvel essai dans {:.2f}s : {}",
+                _(
+                    "Échec d'envoi HEP vers {}:{}{} (tentative {}/{}), nouvel essai dans {:.2f}s : {}"
+                ),
                 host,
                 port,
                 suffix,
@@ -154,7 +157,7 @@ class NullSender(Sender):
     def send(self, packet: HepPacket) -> bool:
         encoded = encode(packet, compress=self.compress)
         logger.info(
-            "[dry-run] HEP encoded ({} octets{}) proto_type={} correlation_id={!r}",
+            _("[dry-run] HEP encoded ({} octets{}) proto_type={} correlation_id={!r}"),
             len(encoded),
             ", compressé" if self.compress else "",
             packet.proto_type,
@@ -410,7 +413,11 @@ def make_sender(
             retries=retries,
             retry_backoff=retry_backoff,
         )
-    raise ValueError(f"transport HEP inconnu : {transport!r} (attendu : {', '.join(TRANSPORTS)})")
+    raise ValueError(
+        _("transport HEP inconnu : {transport!r} (attendu : {expected})").format(
+            transport=transport, expected=", ".join(TRANSPORTS)
+        )
+    )
 
 
 # Re-exporté pour faciliter le typing dans les tests

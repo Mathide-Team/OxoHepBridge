@@ -18,6 +18,8 @@ from pathlib import Path
 
 from loguru import logger
 
+from oxo_hep_bridge.i18n import _
+
 
 class ConfigError(Exception):
     """Fichier TOML syntaxiquement valide mais sémantiquement fautif :
@@ -158,16 +160,22 @@ def _validate_toml_table(data: dict, name: str, known_keys: frozenset[str]) -> d
     value = data.get(name, {})
     if not isinstance(value, dict):
         raise ConfigError(
-            f"[{name}] doit être une table TOML (ex: '[{name}]' suivi de "
-            f"'clé = valeur' sur les lignes suivantes) ; trouvé "
-            f"{type(value).__name__} — clé placée hors de sa section [{name}] ?"
+            _(
+                "[{name}] doit être une table TOML (ex: '[{name}]' suivi de "
+                "'clé = valeur' sur les lignes suivantes) ; trouvé "
+                "{type} — clé placée hors de sa section [{name}] ?"
+            ).format(name=name, type=type(value).__name__)
         )
     unknown = set(value) - known_keys
     if unknown:
         raise ConfigError(
-            f"clé(s) TOML inconnue(s) sous [{name}] : {', '.join(sorted(unknown))} "
-            f"(clés valides : {', '.join(sorted(known_keys))}) — typo dans "
-            "config/oxo-hep-bridge.toml ?"
+            _(
+                "clé(s) TOML inconnue(s) sous [{name}] : {unknown} "
+                "(clés valides : {valid}) — typo dans "
+                "config/oxo-hep-bridge.toml ?"
+            ).format(
+                name=name, unknown=", ".join(sorted(unknown)), valid=", ".join(sorted(known_keys))
+            )
         )
     return value
 
@@ -243,10 +251,15 @@ def apply_toml(config: Config, toml_path: Path) -> None:
     unknown_top_level = set(data) - _KNOWN_TOML_TABLES
     if unknown_top_level:
         raise ConfigError(
-            f"entrée(s) inconnue(s) au premier niveau du TOML : "
-            f"{', '.join(sorted(unknown_top_level))} (sections valides : "
-            f"{', '.join(sorted(_KNOWN_TOML_TABLES))}) — clé écrite hors de "
-            "sa section [table] ? (ex: 'host = ...' doit être sous [hep])"
+            _(
+                "entrée(s) inconnue(s) au premier niveau du TOML : "
+                "{unknown} (sections valides : "
+                "{valid}) — clé écrite hors de "
+                "sa section [table] ? (ex: 'host = ...' doit être sous [hep])"
+            ).format(
+                unknown=", ".join(sorted(unknown_top_level)),
+                valid=", ".join(sorted(_KNOWN_TOML_TABLES)),
+            )
         )
 
     cap = _validate_toml_table(data, "capture", _CAPTURE_KEYS)

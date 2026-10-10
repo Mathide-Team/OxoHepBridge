@@ -9,6 +9,7 @@ from loguru import logger
 
 from oxo_hep_bridge.config import Config
 from oxo_hep_bridge.hep import HepPacket
+from oxo_hep_bridge.i18n import _
 from oxo_hep_bridge.keepalive import KeepaliveScheduler
 from oxo_hep_bridge.normalizer import normalize
 from oxo_hep_bridge.sender import make_sender
@@ -73,7 +74,7 @@ class Bridge:
                     packet = self.normalize_packet(flat)
                 except Exception:
                     logger.exception(
-                        "erreur inattendue pendant normalize() sur le paquet #{}", stats.received
+                        _("erreur inattendue pendant normalize() sur le paquet #{}"), stats.received
                     )
                     stats.normalize_errors += 1
                     continue
@@ -99,7 +100,7 @@ class Bridge:
                     )
         except TsharkError as exc:
             stats.tshark_errors += 1
-            logger.error("tshark a signalé une erreur fatale : {}", exc)
+            logger.error(_("tshark a signalé une erreur fatale : {}"), exc)
             # retry_count vaut 0 par défaut sur la classe de base Sender
             # (NullSender et les senders factices de test ne peuvent pas
             # échouer) ; UDPSender et TCPSender l'incrémentent à chaque

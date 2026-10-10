@@ -27,6 +27,11 @@ oxo-hep-bridge = "oxo_hep_bridge.cli:main"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+# Catalogues gettext compilés (issue #50, `tools/i18n.py compile`) : tous
+# ceux présents sont embarqués, sans liste de langues à tenir à jour ici.
+[tool.setuptools.package-data]
+oxo_hep_bridge = ["locale/*/LC_MESSAGES/*.mo"]
+
 [tool.ruff]
 line-length = 100
 target-version = "py311"

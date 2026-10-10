@@ -1,0 +1,250 @@
+# German translations for oxo-hep-bridge package.
+# Copyright (C) 2026 THE oxo-hep-bridge'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the oxo-hep-bridge package.
+# Automatically generated, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: oxo-hep-bridge\n"
+"Report-Msgid-Bugs-To: https://github.com/Mathide-Team/OxoHepBridge/issues\n"
+"POT-Creation-Date: 2026-10-10 19:54+0000\n"
+"PO-Revision-Date: 2026-10-10 19:45+0000\n"
+"Last-Translator: Automatically generated\n"
+"Language-Team: none\n"
+"Language: de\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: src/oxo_hep_bridge/bridge.py
+msgid "erreur inattendue pendant normalize() sur le paquet #{}"
+msgstr ""
+
+#: src/oxo_hep_bridge/bridge.py
+msgid "tshark a signalé une erreur fatale : {}"
+msgstr ""
+
+#: src/oxo_hep_bridge/cli.py
+msgid "Arrêt demandé (SIGINT/SIGTERM), fermeture du subprocess tshark..."
+msgstr ""
+
+#: src/oxo_hep_bridge/cli.py
+msgid "Capture agent ID HEP"
+msgstr ""
+
+#: src/oxo_hep_bridge/cli.py
+msgid "Champ tshark à utiliser comme correlation_id"
+msgstr ""
+
+#: src/oxo_hep_bridge/cli.py
+msgid "Chemin de fichier : ajoute une sortie JSON Lines structurée (en plus de stderr, serialize=True loguru) ; les enregistrements résumé/progression y portent le détail complet de Stats.to_dict() sous record.extra.stats (absent/vide = désactivé)"
+msgstr ""
+
+#: src/oxo_hep_bridge/cli.py
+msgid "Chemin vers l'exécutable tshark (défaut: 'tshark', résolu via PATH)"
+msgstr ""
+
+#: src/oxo_hep_bridge/cli.py
+msgid "Chemin vers le fichier de configuration TOML (ex: config/oxo-hep-bridge.toml)"
+msgstr ""
+
+#: src/oxo_hep_bridge/cli.py
+msgid "Clé d'authentification HEP (si configurée côté heplify-server NodePW)"
+msgstr ""
+
+#: src/oxo_hep_bridge/cli.py
+msgid "Compresse le payload HEP (gzip, chunk 0x0010 au lieu de 0x000F). ATTENTION : non décodé par HOMER11/heplify-server à ce jour — n'activer que si le collecteur cible supporte explicitement ce chunk"
+msgstr ""
+
+#: src/oxo_hep_bridge/cli.py
+msgid "Délai de base en secondes avant la 1re nouvelle tentative (doublé à chaque tentative suivante), sans effet si --hep-retries n'est pas positionné (défaut : 0.5)"
+msgstr ""
+
+#: src/oxo_hep_bridge/cli.py
+msgid "Désactive la vérification du certificat serveur en transport tls (nom d'hôte + chaîne de confiance) — labo/certificat auto-signé uniquement, jamais en production"
+msgstr ""
+
+#: src/oxo_hep_bridge/cli.py
+msgid "Erreur fatale pendant l'exécution : {}"
+msgstr ""
+
+#: src/oxo_hep_bridge/cli.py
+msgid "Fichier .pcap à relire hors-ligne"
+msgstr ""
+
+#: src/oxo_hep_bridge/cli.py
+msgid "Fichier CA personnalisé pour vérifier le certificat du collecteur (transport tls)"
+msgstr ""
+
+#: src/oxo_hep_bridge/cli.py
+msgid "Filtre BPF (ex: \"udp port 32640\")"
+msgstr ""
+
+#: src/oxo_hep_bridge/cli.py
+msgid "Force le décodage tshark (ex: udp.port==32640,uaudp). Répétable."
+msgstr ""
+
+#: src/oxo_hep_bridge/cli.py
+msgid "Fréquence (en paquets HEP envoyés) du log de progression pendant le run (défaut : 500 ; <= 0 désactive ce log, seul le résumé de fin de run reste affiché)"
+msgstr ""
+
+#: src/oxo_hep_bridge/cli.py
+msgid "HEP protocol type (100=LOG)"
+msgstr ""
+
+#: src/oxo_hep_bridge/cli.py
+msgid "Interface réseau pour capture live (ex: eth0)"
+msgstr ""
+
+#: src/oxo_hep_bridge/cli.py
+msgid "Intervalle en secondes entre deux paquets HEP keepalive envoyés en capture live (0 ou absent = désactivé)"
+msgstr ""
+
+#: src/oxo_hep_bridge/cli.py
+msgid "N'envoie rien, encode et logge seulement"
+msgstr ""
+
+#: src/oxo_hep_bridge/cli.py
+msgid "Nom du nœud / group id HEP (chunk 0x0013), visible dans HOMER"
+msgstr ""
+
+#: src/oxo_hep_bridge/cli.py
+msgid "Nombre de tentatives supplémentaires sur échec d'envoi HEP (UDP, TCP ou TLS), avec backoff exponentiel entre chaque essai (0/absent = désactivé, comportement inchangé)"
+msgstr ""
+
+#: src/oxo_hep_bridge/cli.py
+msgid "Pont Alcatel OXO (UAUDP/UA3G/NOE) vers HOMER via tshark -T ek + HEPv3"
+msgstr ""
+
+#: src/oxo_hep_bridge/cli.py
+msgid "Transport HEP vers le collecteur : udp (défaut), tcp ou tls"
+msgstr ""
+
+#: src/oxo_hep_bridge/cli.py
+msgid "configuration TOML invalide ({}) : {}"
+msgstr ""
+
+#: src/oxo_hep_bridge/cli.py
+msgid "fichier TOML syntaxiquement invalide ({}) : {}"
+msgstr ""
+
+#: src/oxo_hep_bridge/cli.py
+msgid "hep.compress_payload=true : le chunk HEP COMPRESSED_PAYLOAD (0x0010) n'est décodé que par un collecteur qui le supporte explicitement — HOMER11/heplify-server ne le décodent pas nativement à ce jour et le payload de chaque paquet serait alors perdu côté collecteur. Ne pas activer sans avoir vérifié le support du collecteur cible."
+msgstr ""
+
+#: src/oxo_hep_bridge/cli.py
+msgid "hep.tls_verify/hep.tls_ca_file n'ont d'effet qu'avec transport=tls (transport actuel : {!r})"
+msgstr ""
+
+#: src/oxo_hep_bridge/config.py
+#, python-brace-format
+msgid "[{name}] doit être une table TOML (ex: '[{name}]' suivi de 'clé = valeur' sur les lignes suivantes) ; trouvé {type} — clé placée hors de sa section [{name}] ?"
+msgstr ""
+
+#: src/oxo_hep_bridge/config.py
+#, python-brace-format
+msgid "clé(s) TOML inconnue(s) sous [{name}] : {unknown} (clés valides : {valid}) — typo dans config/oxo-hep-bridge.toml ?"
+msgstr ""
+
+#: src/oxo_hep_bridge/config.py
+#, python-brace-format
+msgid "entrée(s) inconnue(s) au premier niveau du TOML : {unknown} (sections valides : {valid}) — clé écrite hors de sa section [table] ? (ex: 'host = ...' doit être sous [hep])"
+msgstr ""
+
+#: src/oxo_hep_bridge/hep.py
+msgid "En-tête de chunk tronqué"
+msgstr ""
+
+#: src/oxo_hep_bridge/hep.py
+#, python-brace-format
+msgid "IPv4 fournie mais ip_family={family}"
+msgstr ""
+
+#: src/oxo_hep_bridge/hep.py
+#, python-brace-format
+msgid "IPv6 fournie mais ip_family={family}"
+msgstr ""
+
+#: src/oxo_hep_bridge/hep.py
+#, python-brace-format
+msgid "Longueur de chunk invalide : {length}"
+msgstr ""
+
+#: src/oxo_hep_bridge/hep.py
+#, python-brace-format
+msgid "Longueur totale annoncée {announced} ≠ {actual}"
+msgstr ""
+
+#: src/oxo_hep_bridge/hep.py
+msgid "Magic HEP3 attendu, reçu {magic!r}"
+msgstr ""
+
+#: src/oxo_hep_bridge/hep.py
+msgid "Paquet trop court pour un en-tête HEPv3"
+msgstr ""
+
+#: src/oxo_hep_bridge/keepalive.py
+msgid "échec d'envoi du keepalive HEP"
+msgstr ""
+
+#: src/oxo_hep_bridge/normalizer.py
+msgid "timestamp tshark invalide {!r}, fallback now"
+msgstr ""
+
+#: src/oxo_hep_bridge/sdnotify.py
+msgid "_notify_every ne devrait jamais être None ici (voir enabled/start())"
+msgstr ""
+
+#: src/oxo_hep_bridge/sdnotify.py
+msgid "échec d'envoi de la notification sd_notify {!r} : {}"
+msgstr ""
+
+#: src/oxo_hep_bridge/sender.py
+msgid "[dry-run] HEP encoded ({} octets{}) proto_type={} correlation_id={!r}"
+msgstr ""
+
+#: src/oxo_hep_bridge/sender.py
+msgid "transport HEP inconnu : {transport!r} (attendu : {expected})"
+msgstr ""
+
+#: src/oxo_hep_bridge/sender.py
+msgid "Échec d'envoi HEP vers {}:{}{} (tentative {}/{}), nouvel essai dans {:.2f}s : {}"
+msgstr ""
+
+#: src/oxo_hep_bridge/sender.py
+msgid "Échec d'envoi HEP vers {}:{}{} après {} tentative(s) : {}"
+msgstr ""
+
+#: src/oxo_hep_bridge/tshark_source.py
+msgid "Ligne non-JSON ignorée : {!r}"
+msgstr ""
+
+#: src/oxo_hep_bridge/tshark_source.py
+msgid "interface ou pcap requis"
+msgstr ""
+
+#: src/oxo_hep_bridge/tshark_source.py
+msgid "proc.stderr est None malgré stderr=PIPE"
+msgstr ""
+
+#: src/oxo_hep_bridge/tshark_source.py
+msgid "proc.stdout est None malgré stdout=PIPE"
+msgstr ""
+
+#: src/oxo_hep_bridge/tshark_source.py
+msgid "tshark ne répond pas à terminate(), envoi de kill()"
+msgstr ""
+
+#: src/oxo_hep_bridge/tshark_source.py
+msgid "tshark ne se termine pas, envoi de terminate()"
+msgstr ""
+
+#: src/oxo_hep_bridge/tshark_source.py
+#, python-brace-format
+msgid "tshark s'est terminé avec le code {rc}"
+msgstr ""
+
+#: src/oxo_hep_bridge/tshark_source.py
+msgid "tshark stderr : {}"
+msgstr ""
