@@ -236,6 +236,7 @@ d'environnement équivalente.
 | `--config`        | —                          | Chemin vers un fichier TOML de configuration (table/clé inconnue → erreur explicite, code 2) |
 | `--interface`     | `OXOHEP_INTERFACE`         | Interface réseau pour capture live                                 |
 | `--pcap`          | `OXOHEP_PCAP`               | Fichier .pcap à relire hors-ligne                                   |
+| `--pcap-retime`   | `OXOHEP_PCAP_RETIME`        | Avec `--pcap` : horodate le premier paquet à l'heure courante, écarts conservés. Nécessaire contre HOMER7, qui rejette les dates sans partition (voir [deploy/homer/README.md](deploy/homer/README.md)) |
 | `--bpf`           | `OXOHEP_BPF`                | Filtre BPF (ex: `udp port 32640`)                                   |
 | `--decode-as`     | `OXOHEP_DECODE_AS`          | Force le décodage tshark (ex: `udp.port==32640,uaudp`). Répétable côté CLI ; plusieurs règles séparées par `;` côté variable d'environnement. |
 | `--tshark-path`   | `OXOHEP_TSHARK_PATH`        | Chemin vers l'exécutable `tshark` (défaut: `tshark`, résolu via `PATH`) |
@@ -273,6 +274,15 @@ Le répertoire `sample_captures/` contient 3 captures officielles issues de
 - `ua3g_freeseating_ipv4.pcap` — 64 paquets, chaîne complète `eth:ip:udp:uaudp:ua:noe`
 - `ua3g_freeseating_ipv6.pcap` — 339 paquets, même chaîne en IPv6
 - `uaudp_ipv6.pcap` — 2544 paquets (nécessite `--decode-as udp.port==32640,uaudp`)
+
+## Démo HOMER
+
+`deploy/homer/compose.yml` lance une stack HOMER7 locale (heplify-server,
+PostgreSQL, homer-app) ; `config/oxo-hep-bridge.homer-demo.toml` y rejoue une
+capture d'exemple. Les résultats vérifiés et les limites de heplify-server
+(dates anciennes rejetées sans `--pcap-retime`, payload compressé et
+keepalive non stockés) sont décrits dans
+[deploy/homer/README.md](deploy/homer/README.md).
 
 ## Tests
 

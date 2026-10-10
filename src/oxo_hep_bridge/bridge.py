@@ -3,7 +3,9 @@
 
 from __future__ import annotations
 
+import time
 from collections.abc import Iterator
+from dataclasses import replace
 
 from loguru import logger
 
@@ -48,8 +50,25 @@ class Bridge:
             node_name=config.hep.node_name,
         )
 
+        # Décalage (µs) appliqué aux horodatages en relecture --pcap-retime,
+        # fixé au premier paquet normalisé (voir retime()).
+        self._retime_offset_us: int | None = None
+
+    def retime(self, packet: HepPacket) -> HepPacket:
+        """--pcap-retime : premier paquet = maintenant, écarts relatifs conservés."""
+        if not (self.config.capture.pcap and self.config.capture.pcap_retime):
+            return packet
+        original_us = packet.timestamp_sec * 1_000_000 + packet.timestamp_usec
+        if self._retime_offset_us is None:
+            self._retime_offset_us = time.time_ns() // 1000 - original_us
+            logger.debug("pcap-retime : décalage de {} s", self._retime_offset_us // 1_000_000)
+        shifted_us = original_us + self._retime_offset_us
+        return replace(
+            packet, timestamp_sec=shifted_us // 1_000_000, timestamp_usec=shifted_us % 1_000_000
+        )
+
     def normalize_packet(self, flat: dict) -> HepPacket | None:
-        return normalize(
+        packet = normalize(
             flat,
             capture_agent_id=self.config.hep.capture_agent_id,
             proto_type=self.config.hep.proto_type,
@@ -57,6 +76,7 @@ class Bridge:
             auth_key=self.config.hep.auth_key,
             node_name=self.config.hep.node_name,
         )
+        return None if packet is None else self.retime(packet)
 
     def run(self) -> int:
         self.stats = Stats()
