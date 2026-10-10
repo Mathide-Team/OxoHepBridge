@@ -227,10 +227,10 @@ d'accès à un PABX Alcatel OXO en production, pas d'instance HOMER de
 test) — voir le détail des raisons dans
 [docs/noe-ua3g-homer-mapping.md](noe-ua3g-homer-mapping.md) :
 
-- Intégration Docker HOMER/heplify-server (docker-compose de démo) — le
-  code source de HOMER11 a été fourni et parcouru en lecture, mais lancer
-  une instance réelle nécessite Docker/réseau, indisponibles dans les
-  sandboxes de développement utilisés jusqu'ici.
+- ~~Intégration Docker HOMER/heplify-server (docker-compose de démo)~~ —
+  fait en issue #47 contre HOMER7 (heplify-server 1.60.9, homer-app
+  1.5.22) : `deploy/homer/`. Reste non testé : HOMER11 lui-même (voir
+  `docs/hep-chunks.md`).
 - Mapping métier complet des opcodes UAUDP/NOE → **événements d'appel
   SIP** (INVITE/BYE/180/200...) — distinct du nommage protocolaire
   ci-dessus (désormais fait) : même avec les noms officiels, la

@@ -1,0 +1,68 @@
+# Stack HOMER7 de démonstration pour oxo-hep-bridge (issue #47).
+#
+#   cd deploy/homer && docker compose up -d     (ou : podman compose up -d)
+#
+# - heplify-server : collecteur HEP, UDP et TCP 9060, TLS 9061 ;
+# - PostgreSQL     : stockage (tables hep_proto_100_* pour proto_type LOG) ;
+# - homer-app      : interface web, http://localhost:9080 (admin / sipcapture).
+#
+# Démo locale uniquement : mots de passe par défaut, aucun volume persistant.
+name: oxo-hep-demo
+
+services:
+  db:
+    image: docker.io/library/postgres:15-alpine
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: homerSeven
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U root"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  heplify-server:
+    image: ghcr.io/sipcapture/heplify-server:latest
+    command: ["./heplify-server"]
+    environment:
+      HEPLIFYSERVER_HEPADDR: "0.0.0.0:9060"
+      HEPLIFYSERVER_HEPTCPADDR: "0.0.0.0:9060"
+      HEPLIFYSERVER_HEPTLSADDR: "0.0.0.0:9061"
+      # Certificat auto-signé généré au démarrage dans ce dossier (doit
+      # exister et être inscriptible) : côté pont, --hep-tls-insecure.
+      HEPLIFYSERVER_TLSCERTFOLDER: "/tmp"
+      HEPLIFYSERVER_DBSHEMA: "homer7"
+      HEPLIFYSERVER_DBDRIVER: "postgres"
+      HEPLIFYSERVER_DBADDR: "db:5432"
+      HEPLIFYSERVER_DBUSER: "root"
+      HEPLIFYSERVER_DBPASS: "homerSeven"
+      HEPLIFYSERVER_DBDATATABLE: "homer_data"
+      HEPLIFYSERVER_DBCONFTABLE: "homer_config"
+      HEPLIFYSERVER_DBROTATE: "true"
+      HEPLIFYSERVER_DBDROPDAYS: "5"
+      HEPLIFYSERVER_LOGLVL: "info"
+      HEPLIFYSERVER_LOGSTD: "true"
+      HEPLIFYSERVER_PROMADDR: "0.0.0.0:9096"
+    ports:
+      - "9060:9060/udp"
+      - "9060:9060/tcp"
+      - "9061:9061/tcp"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  homer-app:
+    image: ghcr.io/sipcapture/homer-app:latest
+    environment:
+      DB_HOST: "db"
+      DB_USER: "root"
+      DB_PASS: "homerSeven"
+      DB_KEEPALIVE: "false"
+      HOMER_LOGLEVEL: "info"
+    ports:
+      - "9080:80"
+    depends_on:
+      db:
+        condition: service_healthy
+      heplify-server:
+        condition: service_started

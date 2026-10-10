@@ -22,6 +22,11 @@ fields = []
 # installée ailleurs que dans le PATH par défaut.
 # tshark_path = "/usr/bin/tshark"
 
+# Relecture pcap vers HOMER7 : horodate le premier paquet à l'heure courante
+# (écarts relatifs conservés). Sans cela, heplify-server + PostgreSQL rejette
+# les paquets d'une capture ancienne (pas de partition pour cette date).
+# pcap_retime = true
+
 [hep]
 # Collecteur heplify-server / HOMER
 host = "127.0.0.1"

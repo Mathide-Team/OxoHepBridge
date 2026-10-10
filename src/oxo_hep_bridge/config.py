@@ -44,6 +44,12 @@ class CaptureConfig:
     # et omettrait les champs NOE dynamiques (variables selon le message).
     fields: list[str] = field(default_factory=list)
     tshark_path: str = "tshark"
+    # Relecture --pcap : décale les horodatages HEP pour que le premier paquet
+    # porte l'heure courante (écarts relatifs conservés). Sans cela, HOMER7
+    # (heplify-server + PostgreSQL) rejette les paquets d'une capture ancienne :
+    # « no partition of relation hep_proto_100_default found for row », les
+    # partitions n'existant que autour de la date du jour (issue #47).
+    pcap_retime: bool = False
 
 
 @dataclass
@@ -123,7 +129,9 @@ class Config:
 # (snake_case) et les alias CLI/env divergent parfois du nom du champ
 # dataclass, une simple liste explicite reste plus lisible qu'un mapping
 # implicite fragile.
-_CAPTURE_KEYS = frozenset({"interface", "pcap", "bpf", "decode_as", "fields", "tshark_path"})
+_CAPTURE_KEYS = frozenset(
+    {"interface", "pcap", "bpf", "decode_as", "fields", "tshark_path", "pcap_retime"}
+)
 _HEP_KEYS = frozenset(
     {
         "host",
@@ -193,6 +201,8 @@ def _apply_toml_capture(config: Config, cap: dict) -> None:
         config.capture.fields = list(cap["fields"])
     if "tshark_path" in cap:
         config.capture.tshark_path = cap["tshark_path"]
+    if "pcap_retime" in cap:
+        config.capture.pcap_retime = bool(cap["pcap_retime"])
 
 
 def _apply_toml_hep(config: Config, hep: dict) -> None:
@@ -297,6 +307,8 @@ def apply_env(config: Config) -> None:
         config.capture.interface = v
     if v := env.get("OXOHEP_PCAP"):
         config.capture.pcap = v
+    if v := env.get("OXOHEP_PCAP_RETIME"):
+        config.capture.pcap_retime = _env_bool(v)
     if v := env.get("OXOHEP_BPF"):
         config.capture.bpf = v
     if v := env.get("OXOHEP_DECODE_AS"):

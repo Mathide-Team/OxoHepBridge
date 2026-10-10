@@ -1,0 +1,16 @@
+# Configuration de démonstration : relecture d'une capture d'exemple vers la
+# stack HOMER7 de deploy/homer/compose.yml (issue #47).
+#
+#   oxo-hep-bridge --config config/oxo-hep-bridge.homer-demo.toml
+#
+# Pour une autre capture : --pcap sample_captures/<fichier>.pcap.
+
+[capture]
+pcap = "sample_captures/ua3g_freeseating_ipv4.pcap"
+# HOMER7 n'accepte que des dates proches de la date du jour (partitions).
+pcap_retime = true
+
+[hep]
+host = "127.0.0.1"
+port = 9060
+node_name = "oxo-demo"

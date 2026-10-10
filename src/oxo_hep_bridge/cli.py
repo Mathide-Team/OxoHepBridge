@@ -40,6 +40,14 @@ def build_parser() -> argparse.ArgumentParser:
     src.add_argument("--pcap", help=_("Fichier .pcap à relire hors-ligne"))
     p.add_argument("--bpf", help=_('Filtre BPF (ex: "udp port 32640")'))
     p.add_argument(
+        "--pcap-retime",
+        action="store_true",
+        default=None,  # None = non fourni ; on ne veut pas écraser env/TOML
+        help=_(
+            "Avec --pcap : horodate le premier paquet à l'heure courante (écarts conservés), pour HOMER7"
+        ),
+    )
+    p.add_argument(
         "--decode-as",
         action="append",
         default=None,  # None = non fourni ; on ne veut pas écraser env/TOML
@@ -198,6 +206,8 @@ def _apply_cli_args(config: Config, args: argparse.Namespace) -> None:
         config.capture.pcap = args.pcap
     if args.bpf is not None:
         config.capture.bpf = args.bpf
+    if args.pcap_retime is not None:
+        config.capture.pcap_retime = args.pcap_retime
     if args.decode_as is not None:
         config.capture.decode_as = args.decode_as
     if args.tshark_path is not None:

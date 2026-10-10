@@ -9,6 +9,18 @@ décisions de conception, chiffres de vérification) dans
 [`docs/sessions/`](docs/sessions/). Voir aussi
 [`docs/roadmap.md`](docs/roadmap.md) pour l'état courant du projet.
 
+## Issue #47 — 2026-10-10
+
+Démo HOMER7 : `deploy/homer/compose.yml` (heplify-server, PostgreSQL,
+homer-app), `config/oxo-hep-bridge.homer-demo.toml` et
+`deploy/homer/README.md`. Premier test contre un vrai collecteur : les
+3 captures d'exemple arrivent en base en UDP, TCP et TLS. Nouvelle option
+`--pcap-retime` (TOML `pcap_retime`, `OXOHEP_PCAP_RETIME`) : sans elle,
+heplify-server rejette les captures anciennes (pas de partition pour leur
+date). Confirmé : payload compressé et keepalive reçus mais non stockés
+(heplify-server exige payload et Correlation ID). 15 tests
+(`tests/test_pcap_retime.py`, `tests/test_homer_demo.py`).
+
 ## Issue #50 — 2026-10-10
 
 Internationalisation gettext sur le modèle de Gcm4 : module
