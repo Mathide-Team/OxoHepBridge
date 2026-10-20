@@ -99,7 +99,7 @@ def generate_pot(output: Path) -> Path:
         "--sort-by-file",
         "--no-wrap",
         f"--package-name={DOMAIN}",
-        "--msgid-bugs-address=https://github.com/Mathide-Team/OxoHepBridge/issues",
+        "--msgid-bugs-address=https://github.com/Mathilde-Team/OxoHepBridge/issues",
         "--output",
         str(output),
         *[str(p) for p in source_files()],
