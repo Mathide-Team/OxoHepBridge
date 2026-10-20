@@ -6,7 +6,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: oxo-hep-bridge\n"
-"Report-Msgid-Bugs-To: https://github.com/Mathide-Team/OxoHepBridge/issues\n"
+"Report-Msgid-Bugs-To: https://github.com/Mathilde-Team/OxoHepBridge/issues\n"
 "POT-Creation-Date: 2026-10-10 21:09+0000\n"
 "PO-Revision-Date: 2026-10-10 19:45+0000\n"
 "Last-Translator: Automatically generated\n"
