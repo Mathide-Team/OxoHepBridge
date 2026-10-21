@@ -67,7 +67,7 @@ le décode avec `tshark -T ek`, normalise les champs, les encapsule en **HEPv3**
 - Tests automatisés sur les fixtures issues des captures officielles Wireshark.
 - CI durcie : `ruff check`/`ruff format`, contrôle de type statique (`mypy`,
   périmètre `src/oxo_hep_bridge` + `tools/`) et seuil de couverture minimal
-  (`--cov-fail-under=80`) sur chaque push/PR.
+  (`--cov-fail-under=95`) sur chaque push/PR.
 
 ## Installation
 
@@ -288,7 +288,7 @@ keepalive non stockés) sont décrits dans
 
 ```bash
 make test          # uv run pytest
-make test-cov      # uv run pytest + couverture (échoue sous 80 %, comme la CI)
+make test-cov      # uv run pytest + couverture (échoue sous 95 %, comme la CI)
 make lint          # uv run ruff check + format --check
 make typecheck     # uv run mypy (src/oxo_hep_bridge + tools/)
 ```
