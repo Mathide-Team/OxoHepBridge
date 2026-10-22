@@ -61,12 +61,15 @@ tests/test_docs.py
 tests/test_fields.py
 tests/test_hep.py
 tests/test_hep_receiver.py
+tests/test_homer_demo.py
 tests/test_i18n.py
 tests/test_keepalive.py
+tests/test_loguru_regles.py
 tests/test_no_cross_imports.py
 tests/test_node_name.py
 tests/test_normalizer.py
 tests/test_packaging.py
+tests/test_pcap_retime.py
 tests/test_real_tshark_integration.py
 tests/test_sdnotify.py
 tests/test_semantics.py

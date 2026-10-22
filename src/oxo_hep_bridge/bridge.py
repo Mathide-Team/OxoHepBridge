@@ -21,6 +21,7 @@ from oxo_hep_bridge.tshark_source import TsharkEKSource, TsharkError
 
 class Bridge:
     def __init__(self, config: Config) -> None:
+        logger.debug("Bridge.__init__() appelée | dry_run={}", config.dry_run)
         self.config = config
         self.source = TsharkEKSource(
             tshark_path=config.capture.tshark_path,
@@ -53,21 +54,27 @@ class Bridge:
         # Décalage (µs) appliqué aux horodatages en relecture --pcap-retime,
         # fixé au premier paquet normalisé (voir retime()).
         self._retime_offset_us: int | None = None
+        logger.debug("Bridge.__init__() retourne | pont construit")
 
     def retime(self, packet: HepPacket) -> HepPacket:
         """--pcap-retime : premier paquet = maintenant, écarts relatifs conservés."""
+        logger.trace("retime() appelée")
         if not (self.config.capture.pcap and self.config.capture.pcap_retime):
+            logger.trace("retime() retourne | paquet inchangé (relecture sans retime)")
             return packet
         original_us = packet.timestamp_sec * 1_000_000 + packet.timestamp_usec
         if self._retime_offset_us is None:
             self._retime_offset_us = time.time_ns() // 1000 - original_us
             logger.debug("pcap-retime : décalage de {} s", self._retime_offset_us // 1_000_000)
         shifted_us = original_us + self._retime_offset_us
-        return replace(
+        decale = replace(
             packet, timestamp_sec=shifted_us // 1_000_000, timestamp_usec=shifted_us % 1_000_000
         )
+        logger.trace("retime() retourne | paquet recalé")
+        return decale
 
     def normalize_packet(self, flat: dict) -> HepPacket | None:
+        logger.trace("normalize_packet() appelée")
         packet = normalize(
             flat,
             capture_agent_id=self.config.hep.capture_agent_id,
@@ -76,9 +83,12 @@ class Bridge:
             auth_key=self.config.hep.auth_key,
             node_name=self.config.hep.node_name,
         )
-        return None if packet is None else self.retime(packet)
+        resultat = None if packet is None else self.retime(packet)
+        logger.trace("normalize_packet() retourne | {}", "paquet" if resultat else "None")
+        return resultat
 
     def run(self) -> int:
+        logger.debug("run() appelée")
         self.stats = Stats()
         stats = self.stats
         # Le keepalive n'a de sens qu'en capture live : une relecture pcap se
@@ -127,6 +137,7 @@ class Bridge:
             # nouvelle tentative consommée par --hep-retries.
             stats.send_retries = self.sender.retry_count
             stats.log_summary(verbose=True)
+            logger.debug("run() retourne | 1 (erreur tshark)")
             return 1
         finally:
             if keepalive_active:
@@ -137,11 +148,14 @@ class Bridge:
             self.sender.close()
         stats.send_retries = self.sender.retry_count
         stats.log_summary()
+        logger.debug("run() retourne | 0 (fin normale)")
         return 0
 
     def iter_normalized(self) -> Iterator[HepPacket]:
         """Itérateur utile pour les tests : yield les paquets normalisés sans envoyer."""
+        logger.debug("iter_normalized() appelée")
         for flat in self.source.iter_packets():
             packet = self.normalize_packet(flat)
             if packet is not None:
                 yield packet
+        logger.debug("iter_normalized() retourne | itération terminée")

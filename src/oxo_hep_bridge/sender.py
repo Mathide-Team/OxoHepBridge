@@ -56,6 +56,7 @@ def _send_with_retry(
     plutôt que de muter un compteur par effet de bord — l'appelant l'ajoute
     à son propre `retry_count` cumulé.
     """
+    logger.debug("_send_with_retry() appelée | host={} port={} retries={}", host, port, retries)
     delays = _retry_delays(retries, retry_backoff)
     used = 0
     suffix = f" ({label})" if label else ""
@@ -95,7 +96,9 @@ def _send_with_retry(
                 exc,
             )
         else:
+            logger.debug("_send_with_retry() retourne | True après {} tentative(s)", used + 1)
             return True, used
+    logger.debug("_send_with_retry() retourne | False (garde de type)")
     return False, used  # inatteignable (la boucle retourne toujours), garde de type
 
 
@@ -115,9 +118,12 @@ def _resolve_destination(
     `TCPSender`) : `getaddrinfo` peut renvoyer des résultats différents selon
     le type de socket demandé.
     """
+    logger.debug("_resolve_destination() appelée | host={} port={}", host, port)
     infos = socket.getaddrinfo(host, port, type=socktype)
     family, _socktype, _proto, _canonname, sockaddr = infos[0]
-    return family, sockaddr
+    destination = (family, sockaddr)
+    logger.debug("_resolve_destination() retourne | destination résolue")
+    return destination
 
 
 class Sender:
@@ -152,9 +158,12 @@ class NullSender(Sender):
     """Mode dry-run : encode le paquet (pour valider l'encodeur) mais ne l'envoie pas."""
 
     def __init__(self, compress: bool = False) -> None:
+        logger.debug("NullSender.__init__() appelée | compress={}", compress)
         self.compress = compress
+        logger.debug("NullSender.__init__() retourne | sender dry-run prêt")
 
     def send(self, packet: HepPacket) -> bool:
+        logger.debug("NullSender.send() appelée | proto_type={}", packet.proto_type)
         encoded = encode(packet, compress=self.compress)
         logger.info(
             _("[dry-run] HEP encoded ({} octets{}) proto_type={} correlation_id={!r}"),
@@ -163,6 +172,7 @@ class NullSender(Sender):
             packet.proto_type,
             packet.correlation_id,
         )
+        logger.debug("NullSender.send() retourne | True (dry-run)")
         return True
 
 
@@ -190,6 +200,7 @@ class UDPSender(Sender):
         retry_backoff: float = 0.5,
         sleep: Callable[[float], None] = time.sleep,
     ) -> None:
+        logger.debug("UDPSender.__init__() appelée | {}:{} retries={}", host, port, retries)
         self.host = host
         self.port = port
         self.compress = compress
@@ -199,9 +210,12 @@ class UDPSender(Sender):
         self.retry_count = 0  # cumulé sur la durée de vie du sender, pour les stats
         self._sock: socket.socket | None = None
         self._sockaddr: tuple = ()  # toujours réaffecté par _connect() avant tout envoi
+        logger.debug("UDPSender.__init__() retourne | sender UDP prêt ({}:{})", host, port)
 
     def _connect(self) -> socket.socket:
+        logger.debug("UDPSender._connect() appelée")
         if self._sock is not None:
+            logger.debug("UDPSender._connect() retourne | socket existante réutilisée")
             return self._sock
         family, sockaddr = _resolve_destination(self.host, self.port, socket.SOCK_DGRAM)
         sock = socket.socket(family, socket.SOCK_DGRAM)
@@ -219,13 +233,17 @@ class UDPSender(Sender):
         sock.connect(sockaddr)
         self._sock = sock
         self._sockaddr = sockaddr
+        logger.debug("UDPSender._connect() retourne | socket connectée")
         return self._sock
 
     def _send_once(self, encoded: bytes) -> None:
+        logger.debug("UDPSender._send_once() appelée | {} octet(s)", len(encoded))
         sock = self._connect()
         sock.sendto(encoded, self._sockaddr)
+        logger.debug("UDPSender._send_once() retourne | paquet émis")
 
     def send(self, packet: HepPacket) -> bool:
+        logger.debug("UDPSender.send() appelée | proto_type={}", packet.proto_type)
         encoded = encode(packet, compress=self.compress)
         ok, used = _send_with_retry(
             send_once=lambda: self._send_once(encoded),
@@ -237,13 +255,16 @@ class UDPSender(Sender):
             port=self.port,
         )
         self.retry_count += used
+        logger.debug("UDPSender.send() retourne | {}", ok)
         return ok
 
     def close(self) -> None:
+        logger.debug("UDPSender.close() appelée")
         if self._sock is not None:
             self._sock.close()
             self._sock = None
         self._sockaddr = ()
+        logger.debug("UDPSender.close() retourne | socket fermée")
 
 
 class TCPSender(Sender):
@@ -282,6 +303,7 @@ class TCPSender(Sender):
         retry_backoff: float = 0.5,
         sleep: Callable[[float], None] = time.sleep,
     ) -> None:
+        logger.debug("TCPSender.__init__() appelée | {}:{} tls={}", host, port, tls)
         self.host = host
         self.port = port
         self.tls = tls
@@ -293,6 +315,12 @@ class TCPSender(Sender):
         self._sleep = sleep
         self.retry_count = 0  # cumulé sur la durée de vie du sender, pour les stats
         self._sock: socket.socket | ssl.SSLSocket | None = None
+        logger.debug(
+            "TCPSender.__init__() retourne | sender {} prêt ({}:{})",
+            "tls" if tls else "tcp",
+            host,
+            port,
+        )
 
     def _build_tls_context(self) -> ssl.SSLContext:
         """Construit le contexte TLS client.
@@ -305,17 +333,22 @@ class TCPSender(Sender):
         deux cas — même non vérifié, un contexte peut avoir une CA connue
         chargée sans que `check_hostname`/`verify_mode` l'exploitent.
         """
+        logger.debug("_build_tls_context() appelée | vérification={}", self.tls_verify)
         if self.tls_verify:
+            logger.debug("_build_tls_context() retourne | contexte par défaut")
             return ssl.create_default_context(cafile=self.tls_ca_file)
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
         context.check_hostname = False
         context.verify_mode = ssl.CERT_NONE
         if self.tls_ca_file:
             context.load_verify_locations(cafile=self.tls_ca_file)
+        logger.debug("_build_tls_context() retourne | contexte sans vérification")
         return context
 
     def _connect(self) -> socket.socket | ssl.SSLSocket:
+        logger.debug("TCPSender._connect() appelée")
         if self._sock is not None:
+            logger.debug("TCPSender._connect() retourne | socket existante réutilisée")
             return self._sock
         family, sockaddr = _resolve_destination(self.host, self.port, socket.SOCK_STREAM)
         raw_sock = socket.socket(family, socket.SOCK_STREAM)
@@ -338,21 +371,26 @@ class TCPSender(Sender):
                 self._sock = context.wrap_socket(raw_sock, server_hostname=self.host)
             else:
                 self._sock = raw_sock
-        except Exception:
+        except Exception as exc:
             # connect() ou la poignée de main TLS a échoué : ne pas laisser un
             # descripteur de socket partiellement ouvert fuiter, l'appelant
             # (send()) retentera une connexion propre au prochain envoi.
             raw_sock.close()
+            logger.debug("TCPSender._connect() : échec, socket brute fermée : {}", exc)
             raise
+        logger.debug("TCPSender._connect() retourne | socket établie")
         return self._sock
 
     def _send_once(self, encoded: bytes) -> None:
+        logger.debug("TCPSender._send_once() appelée | {} octet(s)", len(encoded))
         sock = self._connect()
         sock.sendall(encoded)
+        logger.debug("TCPSender._send_once() retourne | paquet émis")
 
     def send(self, packet: HepPacket) -> bool:
         # ssl.SSLError (poignée de main TLS incluse) est une sous-classe
         # d'OSError, déjà couverte par _send_with_retry sans except dédié.
+        logger.debug("TCPSender.send() appelée | proto_type={}", packet.proto_type)
         encoded = encode(packet, compress=self.compress)
         ok, used = _send_with_retry(
             send_once=lambda: self._send_once(encoded),
@@ -365,13 +403,16 @@ class TCPSender(Sender):
             label="tls" if self.tls else "tcp",
         )
         self.retry_count += used
+        logger.debug("TCPSender.send() retourne | {}", ok)
         return ok
 
     def close(self) -> None:
+        logger.debug("TCPSender.close() appelée")
         if self._sock is not None:
             with contextlib.suppress(OSError):
                 self._sock.close()
             self._sock = None
+        logger.debug("TCPSender.close() retourne | socket fermée")
 
 
 def make_sender(
@@ -396,13 +437,17 @@ def make_sender(
     (`UDPSender`/`TCPSender`) : `NullSender` ne peut pas échouer, un retry
     n'y aurait aucun sens.
     """
+    logger.debug("make_sender() appelée | transport={} dry_run={}", transport, dry_run)
     if dry_run:
+        logger.debug("make_sender() retourne | NullSender (dry-run)")
         return NullSender(compress=compress)
     if transport == "udp":
+        logger.debug("make_sender() retourne | UDPSender")
         return UDPSender(
             host, port, compress=compress, retries=retries, retry_backoff=retry_backoff
         )
     if transport in ("tcp", "tls"):
+        logger.debug("make_sender() retourne | TCPSender")
         return TCPSender(
             host,
             port,
@@ -413,6 +458,7 @@ def make_sender(
             retries=retries,
             retry_backoff=retry_backoff,
         )
+    logger.error(_("make_sender() : transport HEP inconnu {!r}"), transport)
     raise ValueError(
         _("transport HEP inconnu : {transport!r} (attendu : {expected})").format(
             transport=transport, expected=", ".join(TRANSPORTS)

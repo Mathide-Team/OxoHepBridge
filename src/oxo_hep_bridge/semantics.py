@@ -93,6 +93,8 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from loguru import logger
+
 from oxo_hep_bridge.fields import as_int, as_str, build_correlation_id, pick
 from oxo_hep_bridge.ua_opcode_names import (
     NOE_CLASS_NAMES,
@@ -145,6 +147,7 @@ def extract_uaudp_fields(flat: dict[str, Any]) -> dict[str, Any]:
     Les champs listés (ex: ``type``/``length`` quand plusieurs paramètres QoS
     sont empilés) sont conservés comme listes pour ne pas perdre d'information.
     """
+    logger.trace("extract_uaudp_fields() appelée")
     out: dict[str, Any] = {}
     for k, v in flat.items():
         if not k.startswith(_UAUDP_PREFIX):
@@ -152,6 +155,7 @@ def extract_uaudp_fields(flat: dict[str, Any]) -> dict[str, Any]:
         name = k[len(_UAUDP_PREFIX) :]
         if name in _UAUDP_SCALAR_FIELDS:
             out[name] = v
+    logger.trace("extract_uaudp_fields() retourne | {} champ(s)", len(out))
     return out
 
 
@@ -178,6 +182,7 @@ def annotate_noe_event(event: dict[str, Any]) -> dict[str, Any]:
     ``oxo_hep_bridge.ua_opcode_names``). N'écrase jamais un champ existant ;
     n'ajoute rien si la valeur est absente ou non résolvable.
     """
+    logger.trace("annotate_noe_event() appelée")
     out = dict(event)
     for field, table, name_field in _NOE_NAME_LOOKUPS:
         if name_field in out:
@@ -185,6 +190,7 @@ def annotate_noe_event(event: dict[str, Any]) -> dict[str, Any]:
         resolved = decode_name(table, pick(out.get(field)))
         if resolved is not None:
             out[name_field] = resolved
+    logger.trace("annotate_noe_event() retourne | événement annoté")
     return out
 
 
@@ -197,12 +203,16 @@ def _infer_ua3g_direction(flat: dict[str, Any]) -> dict[int, str] | None:
     None si aucun des deux ports n'y figure — pas de sens deviné sans base
     sourcée (voir docstring du module).
     """
+    logger.trace("_infer_ua3g_direction() appelée")
     srcport = as_int(flat.get("udp_udp_srcport") or flat.get("tcp_tcp_srcport"), default=-1)
     dstport = as_int(flat.get("udp_udp_dstport") or flat.get("tcp_tcp_dstport"), default=-1)
     if srcport in UAUDP_TERMINAL_DEFAULT_PORTS:
+        logger.trace("_infer_ua3g_direction() retourne | table term")
         return UA3G_OPCODE_TERM_NAMES
     if dstport in UAUDP_TERMINAL_DEFAULT_PORTS:
+        logger.trace("_infer_ua3g_direction() retourne | table sys")
         return UA3G_OPCODE_SYS_NAMES
+    logger.trace("_infer_ua3g_direction() retourne | None (sens indéterminé)")
     return None
 
 
@@ -281,6 +291,7 @@ def annotate_ua3g_message(
       résolus élément par élément (liste alignée, ``None`` pour les
       identifiants non résolvables) plutôt qu'une seule valeur.
     """
+    logger.trace("annotate_ua3g_message() appelée")
     out = dict(message)
     if opcode_table is not None and "opcode_name" not in out:
         resolved = decode_name(opcode_table, pick(out.get("opcode")))
@@ -298,6 +309,7 @@ def annotate_ua3g_message(
         resolved_names = decode_names(param_table, out.get(field))
         if resolved_names is not None:
             out[names_field] = resolved_names
+    logger.trace("annotate_ua3g_message() retourne | message annoté")
     return out
 
 
@@ -307,6 +319,7 @@ def build_semantic_payload(flat: dict[str, Any]) -> dict[str, Any]:
     Retourne un dict structuré (à sérialiser en JSON par l'appelant). Toujours
     non vide si le paquet contient au moins un champ UAUDP/UA3G/NOE.
     """
+    logger.trace("build_semantic_payload() appelée")
     uaudp = extract_uaudp_fields(flat)
     # les champs QoS (version, window_size, mtu...) sont déjà dans uaudp sous
     # leur nom simple ; on les extrait du bloc uaudp pour les déplacer dans une
@@ -384,6 +397,7 @@ def build_semantic_payload(flat: dict[str, Any]) -> dict[str, Any]:
     if noe_events:
         payload["noe"] = noe_events
 
+    logger.trace("build_semantic_payload() retourne | payload construite")
     return payload
 
 
@@ -393,10 +407,14 @@ def encode_semantic_payload(flat: dict[str, Any]) -> bytes | None:
     Retourne None si le paquet ne contient aucune donnée UA exploitable
     (ni UAUDP, ni UA3G, ni NOE) — l'appelant doit alors ignorer le paquet.
     """
+    logger.trace("encode_semantic_payload() appelée")
     has_uaudp = any(k.startswith(_UAUDP_PREFIX) for k in flat)
     has_ua3g = isinstance(flat.get("ua3g"), dict | list)
     has_noe = isinstance(flat.get("noe"), dict | list)
     if not (has_uaudp or has_ua3g or has_noe):
+        logger.trace("encode_semantic_payload() retourne | None (aucune donnée UA)")
         return None
     payload = build_semantic_payload(flat)
-    return json.dumps(payload, ensure_ascii=False, default=str).encode("utf-8")
+    encodage = json.dumps(payload, ensure_ascii=False, default=str).encode("utf-8")
+    logger.trace("encode_semantic_payload() retourne | payload JSON")
+    return encodage

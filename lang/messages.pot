@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: oxo-hep-bridge\n"
 "Report-Msgid-Bugs-To: https://github.com/Mathilde-Team/OxoHepBridge/issues\n"
-"POT-Creation-Date: 2026-10-10 21:09+0000\n"
+"POT-Creation-Date: 2026-10-22 06:48+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,10 +18,12 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 
 #: src/oxo_hep_bridge/bridge.py
+#, python-brace-format
 msgid "erreur inattendue pendant normalize() sur le paquet #{}"
 msgstr ""
 
 #: src/oxo_hep_bridge/bridge.py
+#, python-brace-format
 msgid "tshark a signalé une erreur fatale : {}"
 msgstr ""
 
@@ -118,10 +120,12 @@ msgid "Chemin de fichier : ajoute une sortie JSON Lines structurée (en plus de 
 msgstr ""
 
 #: src/oxo_hep_bridge/cli.py
+#, python-brace-format
 msgid "configuration TOML invalide ({}) : {}"
 msgstr ""
 
 #: src/oxo_hep_bridge/cli.py
+#, python-brace-format
 msgid "fichier TOML syntaxiquement invalide ({}) : {}"
 msgstr ""
 
@@ -138,7 +142,13 @@ msgid "Arrêt demandé (SIGINT/SIGTERM), fermeture du subprocess tshark..."
 msgstr ""
 
 #: src/oxo_hep_bridge/cli.py
+#, python-brace-format
 msgid "Erreur fatale pendant l'exécution : {}"
+msgstr ""
+
+#: src/oxo_hep_bridge/config.py
+#, python-brace-format
+msgid "_validate_toml_table() : [{}] n'est pas une table TOML"
 msgstr ""
 
 #: src/oxo_hep_bridge/config.py
@@ -148,7 +158,17 @@ msgstr ""
 
 #: src/oxo_hep_bridge/config.py
 #, python-brace-format
+msgid "_validate_toml_table() : clés inconnues sous [{}] : {}"
+msgstr ""
+
+#: src/oxo_hep_bridge/config.py
+#, python-brace-format
 msgid "clé(s) TOML inconnue(s) sous [{name}] : {unknown} (clés valides : {valid}) — typo dans config/oxo-hep-bridge.toml ?"
+msgstr ""
+
+#: src/oxo_hep_bridge/config.py
+#, python-brace-format
+msgid "apply_toml() : entrées inconnues au premier niveau : {}"
 msgstr ""
 
 #: src/oxo_hep_bridge/config.py
@@ -158,7 +178,17 @@ msgstr ""
 
 #: src/oxo_hep_bridge/hep.py
 #, python-brace-format
+msgid "_encode_inet() : IPv6 fournie mais ip_family={}"
+msgstr ""
+
+#: src/oxo_hep_bridge/hep.py
+#, python-brace-format
 msgid "IPv6 fournie mais ip_family={family}"
+msgstr ""
+
+#: src/oxo_hep_bridge/hep.py
+#, python-brace-format
+msgid "_encode_inet() : IPv4 fournie mais ip_family={}"
 msgstr ""
 
 #: src/oxo_hep_bridge/hep.py
@@ -167,7 +197,15 @@ msgid "IPv4 fournie mais ip_family={family}"
 msgstr ""
 
 #: src/oxo_hep_bridge/hep.py
+msgid "decode() : paquet trop court pour un en-tête HEPv3"
+msgstr ""
+
+#: src/oxo_hep_bridge/hep.py
 msgid "Paquet trop court pour un en-tête HEPv3"
+msgstr ""
+
+#: src/oxo_hep_bridge/hep.py
+msgid "decode() : magic HEP3 attendu, reçu {!r}"
 msgstr ""
 
 #: src/oxo_hep_bridge/hep.py
@@ -176,11 +214,25 @@ msgstr ""
 
 #: src/oxo_hep_bridge/hep.py
 #, python-brace-format
+msgid "decode() : longueur annoncée {} ≠ {}"
+msgstr ""
+
+#: src/oxo_hep_bridge/hep.py
+#, python-brace-format
 msgid "Longueur totale annoncée {announced} ≠ {actual}"
 msgstr ""
 
 #: src/oxo_hep_bridge/hep.py
+msgid "decode() : en-tête de chunk tronqué"
+msgstr ""
+
+#: src/oxo_hep_bridge/hep.py
 msgid "En-tête de chunk tronqué"
+msgstr ""
+
+#: src/oxo_hep_bridge/hep.py
+#, python-brace-format
+msgid "decode() : longueur de chunk invalide {}"
 msgstr ""
 
 #: src/oxo_hep_bridge/hep.py
@@ -201,19 +253,29 @@ msgid "échec d'envoi de la notification sd_notify {!r} : {}"
 msgstr ""
 
 #: src/oxo_hep_bridge/sdnotify.py
+msgid "_run() : _notify_every ne devrait jamais être None ici"
+msgstr ""
+
+#: src/oxo_hep_bridge/sdnotify.py
 msgid "_notify_every ne devrait jamais être None ici (voir enabled/start())"
 msgstr ""
 
 #: src/oxo_hep_bridge/sender.py
+#, python-brace-format
 msgid "Échec d'envoi HEP vers {}:{}{} après {} tentative(s) : {}"
 msgstr ""
 
 #: src/oxo_hep_bridge/sender.py
+#, python-brace-format
 msgid "Échec d'envoi HEP vers {}:{}{} (tentative {}/{}), nouvel essai dans {:.2f}s : {}"
 msgstr ""
 
 #: src/oxo_hep_bridge/sender.py
 msgid "[dry-run] HEP encoded ({} octets{}) proto_type={} correlation_id={!r}"
+msgstr ""
+
+#: src/oxo_hep_bridge/sender.py
+msgid "make_sender() : transport HEP inconnu {!r}"
 msgstr ""
 
 #: src/oxo_hep_bridge/sender.py
@@ -225,11 +287,23 @@ msgid "Ligne non-JSON ignorée : {!r}"
 msgstr ""
 
 #: src/oxo_hep_bridge/tshark_source.py
+msgid "TsharkEKSource.__init__() : interface ou pcap requis"
+msgstr ""
+
+#: src/oxo_hep_bridge/tshark_source.py
 msgid "interface ou pcap requis"
 msgstr ""
 
 #: src/oxo_hep_bridge/tshark_source.py
+msgid "_drain_stderr() : proc.stderr est None malgré stderr=PIPE"
+msgstr ""
+
+#: src/oxo_hep_bridge/tshark_source.py
 msgid "proc.stderr est None malgré stderr=PIPE"
+msgstr ""
+
+#: src/oxo_hep_bridge/tshark_source.py
+msgid "iter_packets() : proc.stdout est None malgré stdout=PIPE"
 msgstr ""
 
 #: src/oxo_hep_bridge/tshark_source.py
@@ -245,7 +319,13 @@ msgid "tshark ne répond pas à terminate(), envoi de kill()"
 msgstr ""
 
 #: src/oxo_hep_bridge/tshark_source.py
+#, python-brace-format
 msgid "tshark stderr : {}"
+msgstr ""
+
+#: src/oxo_hep_bridge/tshark_source.py
+#, python-brace-format
+msgid "iter_packets() : tshark s'est terminé avec le code {}"
 msgstr ""
 
 #: src/oxo_hep_bridge/tshark_source.py

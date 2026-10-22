@@ -21,6 +21,8 @@ import struct
 from dataclasses import dataclass
 from typing import ClassVar
 
+from loguru import logger
+
 from oxo_hep_bridge.i18n import _
 
 HEP3_MAGIC = b"HEP3"
@@ -143,12 +145,17 @@ def _encode_octet_string(v: bytes | str) -> bytes:
 
 
 def _encode_inet(ip: str, family: int) -> bytes:
+    logger.trace("_encode_inet() appelée | famille={}", family)
     addr = ipaddress.ip_address(ip)
     if isinstance(addr, ipaddress.IPv6Address) and family != IPV6:
+        logger.error(_("_encode_inet() : IPv6 fournie mais ip_family={}"), family)
         raise ValueError(_("IPv6 fournie mais ip_family={family}").format(family=family))
     if isinstance(addr, ipaddress.IPv4Address) and family != IPV4:
+        logger.error(_("_encode_inet() : IPv4 fournie mais ip_family={}"), family)
         raise ValueError(_("IPv4 fournie mais ip_family={family}").format(family=family))
-    return addr.packed
+    paquet = addr.packed
+    logger.trace("_encode_inet() retourne | adresse encodée")
+    return paquet
 
 
 def _chunk(vendor: int, chunk_type: int, payload: bytes) -> bytes:
@@ -169,6 +176,7 @@ def encode(pkt: HepPacket, *, compress: bool = False) -> bytes:
     payload JSON structuré de `semantics.py` compresse bien, les clés/valeurs
     répétitives d'un paquet à l'autre).
     """
+    logger.trace("encode() appelée | proto_type={} compress={}", pkt.proto_type, compress)
     chunks: list[bytes] = []
 
     # IP family
@@ -236,7 +244,9 @@ def encode(pkt: HepPacket, *, compress: bool = False) -> bytes:
 
     body = b"".join(chunks)
     total_len = PACKET_HEADER_SIZE + len(body)
-    return PACKET_HEADER_FMT.pack(HEP3_MAGIC, total_len) + body
+    paquet = PACKET_HEADER_FMT.pack(HEP3_MAGIC, total_len) + body
+    logger.trace("encode() retourne | {} octet(s) HEP", len(paquet))
+    return paquet
 
 
 def decode(packet: bytes) -> list[tuple[int, int, bytes]]:
@@ -244,12 +254,16 @@ def decode(packet: bytes) -> list[tuple[int, int, bytes]]:
 
     Utilisé pour les tests de round-trip. Valide magic + longueur totale.
     """
+    logger.debug("decode() appelée | {} octet(s)", len(packet))
     if len(packet) < PACKET_HEADER_SIZE:
+        logger.error(_("decode() : paquet trop court pour un en-tête HEPv3"))
         raise ValueError(_("Paquet trop court pour un en-tête HEPv3"))
     magic, total_len = PACKET_HEADER_FMT.unpack(packet[:PACKET_HEADER_SIZE])
     if magic != HEP3_MAGIC:
+        logger.error(_("decode() : magic HEP3 attendu, reçu {!r}"), magic)
         raise ValueError(_("Magic HEP3 attendu, reçu {magic!r}").format(magic=magic))
     if total_len != len(packet):
+        logger.error(_("decode() : longueur annoncée {} ≠ {}"), total_len, len(packet))
         raise ValueError(
             _("Longueur totale annoncée {announced} ≠ {actual}").format(
                 announced=total_len, actual=len(packet)
@@ -260,13 +274,16 @@ def decode(packet: bytes) -> list[tuple[int, int, bytes]]:
     offset = PACKET_HEADER_SIZE
     while offset < total_len:
         if offset + CHUNK_HEADER_SIZE > total_len:
+            logger.error(_("decode() : en-tête de chunk tronqué"))
             raise ValueError(_("En-tête de chunk tronqué"))
         vendor, chunk_type, chunk_len = CHUNK_HEADER_FMT.unpack(
             packet[offset : offset + CHUNK_HEADER_SIZE]
         )
         if chunk_len < CHUNK_HEADER_SIZE or offset + chunk_len > total_len:
+            logger.error(_("decode() : longueur de chunk invalide {}"), chunk_len)
             raise ValueError(_("Longueur de chunk invalide : {length}").format(length=chunk_len))
         payload = packet[offset + CHUNK_HEADER_SIZE : offset + chunk_len]
         chunks.append((vendor, chunk_type, payload))
         offset += chunk_len
+    logger.debug("decode() retourne | {} chunk(s)", len(chunks))
     return chunks
