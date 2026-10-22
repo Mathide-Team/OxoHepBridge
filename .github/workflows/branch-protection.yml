@@ -40,4 +40,6 @@ jobs:
       - name: Comparaison avec .github/branch-protection/${{ matrix.branche }}.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: uv run --no-project python scripts/check_branch_protection.py --branche ${{ matrix.branche }}
+        # loguru (SOCLE §8) à la version de uv.lock ; --no-project évite
+        # d'installer le projet et ses dépendances pour un script autonome.
+        run: uv run --no-project --with "loguru==0.7.3" python scripts/check_branch_protection.py --branche ${{ matrix.branche }}
