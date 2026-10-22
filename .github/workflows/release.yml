@@ -1,0 +1,64 @@
+# Publication d'une version (release.yml standard de la team) : pousser sur main un
+# tag vX.Y.Z égal à la version de pyproject.toml, après avoir daté sa section
+# « ## [X.Y.Z] - AAAA-MM-JJ » dans CHANGELOG.md. La release GitHub reprend cette
+# section comme notes et joint l'archive des sources du commit tagué.
+name: Release
+
+"on":
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Publication
+    runs-on: ${{ fromJSON(vars.RUNS_ON_LINUX || '{"group":"maison","labels":["self-hosted","linux"]}') }}
+    env:
+      TAG: ${{ github.ref_name }}
+      DEPOT: ${{ github.event.repository.name }}
+    steps:
+      - name: Checkout du dépôt
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      # python3 du runner maison trop ancien pour tomllib (Python ≥ 3.11).
+      - name: Installation de uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+
+      - name: Tag = version de pyproject.toml
+        run: |
+          version=$(uv run --no-project --python 3.12 python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')
+          if [ "v${version}" != "${TAG}" ]; then
+            echo "::error::tag ${TAG} différent de la version de pyproject.toml (${version})"
+            exit 1
+          fi
+          echo "VERSION=${version}" >> "${GITHUB_ENV}"
+
+      - name: Tag porté par main
+        run: |
+          git fetch --no-tags origin main
+          if ! git merge-base --is-ancestor "${GITHUB_SHA}" FETCH_HEAD; then
+            echo "::error::le commit tagué ${TAG} n'est pas sur main (passer par le relais dev → main)"
+            exit 1
+          fi
+
+      - name: Notes tirées du CHANGELOG
+        run: |
+          awk -v titre="## [${VERSION}]" 'index($0, titre) == 1 { dedans = 1; next } dedans && /^## / { exit } dedans' CHANGELOG.md > notes.md
+          if ! grep -q '[^[:space:]]' notes.md; then
+            echo "::error::section « ## [${VERSION}] » absente ou vide dans CHANGELOG.md"
+            exit 1
+          fi
+
+      - name: Archive des sources
+        run: git archive --format=tar.gz --prefix="${DEPOT}-${VERSION}/" -o "${DEPOT}-${VERSION}.tar.gz" "${GITHUB_SHA}"
+
+      - name: Release GitHub
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
+        with:
+          body_path: notes.md
+          files: ${{ github.event.repository.name }}-*.tar.gz
+          fail_on_unmatched_files: true

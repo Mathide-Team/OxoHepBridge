@@ -9,6 +9,15 @@ décisions de conception, chiffres de vérification) dans
 [`docs/sessions/`](docs/sessions/). Voir aussi
 [`docs/roadmap.md`](docs/roadmap.md) pour l'état courant du projet.
 
+Les versions publiées sont datées « ## [X.Y.Z] - AAAA-MM-JJ » ; les entrées « Issue #NN » restent l'index des sessions.
+
+## [0.1.0] - 2026-10-22
+
+Première version publiée sous forme de release GitHub.
+
+### Ajouté
+- **Workflow de release** (#67) : `.github/workflows/release.yml` publie une release GitHub au push d'un tag `vX.Y.Z` sur `main` (tag = version de `pyproject.toml`, notes tirées de la section `## [X.Y.Z]` de ce journal, archive des sources jointe).
+
 ## Issue #47 — 2026-10-10
 
 Démo HOMER7 : `deploy/homer/compose.yml` (heplify-server, PostgreSQL,
