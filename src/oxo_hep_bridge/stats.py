@@ -50,9 +50,13 @@ class Stats:
     @property
     def success_rate(self) -> float:
         """Pourcentage de paquets reçus effectivement envoyés au collecteur."""
+        logger.trace("success_rate() appelée")
         if self.received == 0:
+            logger.trace("success_rate() retourne | 0.0 (aucun paquet)")
             return 0.0
-        return (self.sent / self.received) * 100.0
+        taux = (self.sent / self.received) * 100.0
+        logger.trace("success_rate() retourne | {:.1f}%", taux)
+        return taux
 
     def log_summary(self, *, verbose: bool = False) -> None:
         """Affiche le récapitulatif de fin de run via loguru.
@@ -70,6 +74,7 @@ class Stats:
         ``record.extra.stats``, pas seulement les quelques valeurs
         interpolées dans le message texte.
         """
+        logger.trace("log_summary() appelée | verbose={}", verbose)
         data = self.to_dict()
         logger.bind(stats=data).info(
             "terminé : {} paquets reçus, {} envoyés, {} ignorés ({} envoyés/reçus)",
@@ -88,6 +93,7 @@ class Stats:
                 self.normalize_errors,
                 self.tshark_errors,
             )
+        logger.trace("log_summary() retourne | récapitulatif émis")
 
     def to_dict(self) -> dict[str, int | float]:
         """Sérialisation en dict des compteurs cumulés.

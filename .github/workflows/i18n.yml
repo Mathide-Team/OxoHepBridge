@@ -45,11 +45,11 @@ jobs:
 
       - name: Rapport de traduction
         run: |
-          uv run --no-project python tools/i18n.py report
-          uv run --no-project python tools/i18n.py report --markdown >> "$GITHUB_STEP_SUMMARY"
+          uv run --no-project --with loguru==0.7.3 python tools/i18n.py report
+          uv run --no-project --with loguru==0.7.3 python tools/i18n.py report --markdown >> "$GITHUB_STEP_SUMMARY"
 
       - name: Catalogues à jour (.pot, .po, .mo)
-        run: uv run --no-project python tools/i18n.py check
+        run: uv run --no-project --with loguru==0.7.3 python tools/i18n.py check
 
   pr-mise-a-jour:
     name: PR de mise à jour des catalogues (manuel)
@@ -75,8 +75,8 @@ jobs:
 
       - name: Mise à jour et compilation
         run: |
-          uv run --no-project python tools/i18n.py update
-          uv run --no-project python tools/i18n.py compile
+          uv run --no-project --with loguru==0.7.3 python tools/i18n.py update
+          uv run --no-project --with loguru==0.7.3 python tools/i18n.py compile
 
       - name: Ouverture de la PR
         env:

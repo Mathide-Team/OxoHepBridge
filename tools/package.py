@@ -24,6 +24,8 @@ import zipfile
 from datetime import datetime
 from pathlib import Path
 
+from loguru import logger
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 # Comparaison exacte sur un segment de chemin (jamais une sous-chaîne :
@@ -52,6 +54,7 @@ def build_archive(output_path: Path, source_root: Path = REPO_ROOT) -> Path:
     renvoie. Exclut uniquement les répertoires/fichiers de
     ``EXCLUDED_DIR_NAMES``/``EXCLUDED_FILE_SUFFIXES``/``EXCLUDED_FILE_NAMES``
     ci-dessus — jamais de motif glob approximatif."""
+    logger.debug("build_archive() appelée | sortie={}", output_path.name)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(output_path, "w", zipfile.ZIP_DEFLATED) as archive:
         for path in sorted(source_root.rglob("*")):
@@ -67,14 +70,17 @@ def build_archive(output_path: Path, source_root: Path = REPO_ROOT) -> Path:
             if path.resolve() == output_path.resolve():
                 continue
             archive.write(path, arcname=str(path.relative_to(source_root)))
+    logger.debug("build_archive() retourne | archive écrite")
     return output_path
 
 
 def main() -> int:
+    logger.debug("main() appelée")
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     output = REPO_ROOT / "dist" / f"oxo-hep-bridge-{timestamp}.zip"
     build_archive(output)
     print(output)
+    logger.debug("main() retourne | 0 (archive construite)")
     return 0
 
 

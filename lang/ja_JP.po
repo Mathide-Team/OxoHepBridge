@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: oxo-hep-bridge\n"
 "Report-Msgid-Bugs-To: https://github.com/Mathilde-Team/OxoHepBridge/issues\n"
-"POT-Creation-Date: 2026-10-10 21:09+0000\n"
+"POT-Creation-Date: 2026-10-22 06:59+0000\n"
 "PO-Revision-Date: 2026-10-10 19:45+0000\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -147,6 +147,18 @@ msgid "[{name}] doit être une table TOML (ex: '[{name}]' suivi de 'clé = valeu
 msgstr ""
 
 #: src/oxo_hep_bridge/config.py
+msgid "_validate_toml_table() : [{}] n'est pas une table TOML"
+msgstr ""
+
+#: src/oxo_hep_bridge/config.py
+msgid "_validate_toml_table() : clés inconnues sous [{}] : {}"
+msgstr ""
+
+#: src/oxo_hep_bridge/config.py
+msgid "apply_toml() : entrées inconnues au premier niveau : {}"
+msgstr ""
+
+#: src/oxo_hep_bridge/config.py
 #, python-brace-format
 msgid "clé(s) TOML inconnue(s) sous [{name}] : {unknown} (clés valides : {valid}) — typo dans config/oxo-hep-bridge.toml ?"
 msgstr ""
@@ -188,6 +200,34 @@ msgstr ""
 msgid "Paquet trop court pour un en-tête HEPv3"
 msgstr ""
 
+#: src/oxo_hep_bridge/hep.py
+msgid "_encode_inet() : IPv4 fournie mais ip_family={}"
+msgstr ""
+
+#: src/oxo_hep_bridge/hep.py
+msgid "_encode_inet() : IPv6 fournie mais ip_family={}"
+msgstr ""
+
+#: src/oxo_hep_bridge/hep.py
+msgid "decode() : en-tête de chunk tronqué"
+msgstr ""
+
+#: src/oxo_hep_bridge/hep.py
+msgid "decode() : longueur annoncée {} ≠ {}"
+msgstr ""
+
+#: src/oxo_hep_bridge/hep.py
+msgid "decode() : longueur de chunk invalide {}"
+msgstr ""
+
+#: src/oxo_hep_bridge/hep.py
+msgid "decode() : magic HEP3 attendu, reçu {!r}"
+msgstr ""
+
+#: src/oxo_hep_bridge/hep.py
+msgid "decode() : paquet trop court pour un en-tête HEPv3"
+msgstr ""
+
 #: src/oxo_hep_bridge/keepalive.py
 msgid "échec d'envoi du keepalive HEP"
 msgstr ""
@@ -201,11 +241,19 @@ msgid "_notify_every ne devrait jamais être None ici (voir enabled/start())"
 msgstr ""
 
 #: src/oxo_hep_bridge/sdnotify.py
+msgid "_run() : _notify_every ne devrait jamais être None ici"
+msgstr ""
+
+#: src/oxo_hep_bridge/sdnotify.py
 msgid "échec d'envoi de la notification sd_notify {!r} : {}"
 msgstr ""
 
 #: src/oxo_hep_bridge/sender.py
 msgid "[dry-run] HEP encoded ({} octets{}) proto_type={} correlation_id={!r}"
+msgstr ""
+
+#: src/oxo_hep_bridge/sender.py
+msgid "make_sender() : transport HEP inconnu {!r}"
 msgstr ""
 
 #: src/oxo_hep_bridge/sender.py
@@ -225,7 +273,23 @@ msgid "Ligne non-JSON ignorée : {!r}"
 msgstr ""
 
 #: src/oxo_hep_bridge/tshark_source.py
+msgid "TsharkEKSource.__init__() : interface ou pcap requis"
+msgstr ""
+
+#: src/oxo_hep_bridge/tshark_source.py
+msgid "_drain_stderr() : proc.stderr est None malgré stderr=PIPE"
+msgstr ""
+
+#: src/oxo_hep_bridge/tshark_source.py
 msgid "interface ou pcap requis"
+msgstr ""
+
+#: src/oxo_hep_bridge/tshark_source.py
+msgid "iter_packets() : proc.stdout est None malgré stdout=PIPE"
+msgstr ""
+
+#: src/oxo_hep_bridge/tshark_source.py
+msgid "iter_packets() : tshark s'est terminé avec le code {}"
 msgstr ""
 
 #: src/oxo_hep_bridge/tshark_source.py

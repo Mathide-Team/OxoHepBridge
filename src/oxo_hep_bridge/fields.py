@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from loguru import logger
+
 
 def pick(value: Any, index: int = 0) -> Any:
     """Retourne value[index] si value est une liste, sinon value tel quel.
@@ -15,24 +17,37 @@ def pick(value: Any, index: int = 0) -> Any:
     tshark -T ek encode parfois un champ répété (ex: udp.port apparaissant
     deux fois) comme une liste plutôt qu'un scalaire.
     """
+    logger.trace("pick() appelée")
     if isinstance(value, list):
-        return value[index] if len(value) > index else None
+        resultat = value[index] if len(value) > index else None
+        logger.trace("pick() retourne | élément de liste")
+        return resultat
+    logger.trace("pick() retourne | valeur scalaire")
     return value
 
 
 def as_int(value: Any, default: int = 0) -> int:
+    logger.trace("as_int() appelée")
     v = pick(value)
     if v is None:
+        logger.trace("as_int() retourne | défaut (valeur absente)")
         return default
     try:
-        return int(v)
-    except (TypeError, ValueError):
+        nombre = int(v)
+    except (TypeError, ValueError) as exc:
+        logger.trace("as_int() retourne | défaut (non convertible : {})", exc)
         return default
+    else:
+        logger.trace("as_int() retourne | entier")
+        return nombre
 
 
 def as_str(value: Any, default: str = "") -> str:
+    logger.trace("as_str() appelée")
     v = pick(value)
-    return default if v is None else str(v)
+    texte = default if v is None else str(v)
+    logger.trace("as_str() retourne | chaîne")
+    return texte
 
 
 def extract_noe_events(flat: dict[str, Any]) -> list[dict[str, Any]]:
@@ -46,13 +61,19 @@ def extract_noe_events(flat: dict[str, Any]) -> list[dict[str, Any]]:
     absent de ``uaudp_ipv6`` (tshark s'arrête à la couche ``uaudp``, voir
     docs/architecture.md#limites-connues).
     """
+    logger.trace("extract_noe_events() appelée")
     noe = flat.get("noe")
     if noe is None:
+        logger.trace("extract_noe_events() retourne | aucun événement")
         return []
     if isinstance(noe, list):
-        return [n for n in noe if isinstance(n, dict)]
+        evenements = [n for n in noe if isinstance(n, dict)]
+        logger.trace("extract_noe_events() retourne | {} événement(s) (liste)", len(evenements))
+        return evenements
     if isinstance(noe, dict):
+        logger.trace("extract_noe_events() retourne | 1 événement (objet)")
         return [noe]
+    logger.trace("extract_noe_events() retourne | aucun événement (type inattendu)")
     return []
 
 
@@ -60,11 +81,14 @@ def extract_noe_events_flat(flat: dict[str, Any]) -> list[dict[str, Any]]:
     """Comme extract_noe_events, mais retire le préfixe "noe_noe_" des clés
     de chaque événement pour produire des noms de champs propres.
     """
+    logger.trace("extract_noe_events_flat() appelée")
     events = extract_noe_events(flat)
-    return [
+    aplaties = [
         {k[len("noe_noe_") :] if k.startswith("noe_noe_") else k: v for k, v in ev.items()}
         for ev in events
     ]
+    logger.trace("extract_noe_events_flat() retourne | {} événement(s)", len(aplaties))
+    return aplaties
 
 
 def build_correlation_id(flat: dict[str, Any]) -> str:
@@ -78,6 +102,7 @@ def build_correlation_id(flat: dict[str, Any]) -> str:
     identifiant plus stable est disponible côté OXO (ex: un identifiant de
     poste/appel, ou le champ ``transaction_id`` si le dissecteur l'expose).
     """
+    logger.trace("build_correlation_id() appelée")
     src_ip = as_str(flat.get("ip_ip_src") or flat.get("ipv6_ipv6_src"))
     dst_ip = as_str(flat.get("ip_ip_dst") or flat.get("ipv6_ipv6_dst"))
     src_port = as_int(flat.get("udp_udp_srcport"))
@@ -85,4 +110,6 @@ def build_correlation_id(flat: dict[str, Any]) -> str:
     endpoint_a = (src_ip, src_port)
     endpoint_b = (dst_ip, dst_port)
     lo, hi = sorted((endpoint_a, endpoint_b))
-    return f"{lo[0]}:{lo[1]}-{hi[0]}:{hi[1]}"
+    identifiant = f"{lo[0]}:{lo[1]}-{hi[0]}:{hi[1]}"
+    logger.trace("build_correlation_id() retourne | identifiant de flux")
+    return identifiant

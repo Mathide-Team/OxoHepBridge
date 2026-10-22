@@ -109,10 +109,12 @@ class Config:
         Les options CLI doivent être appliquées séparément par l'appelant
         (cli.py), après cet appel, pour respecter la priorité CLI > env > TOML.
         """
+        logger.debug("Config.load() appelée | toml={}", toml_path)
         config = cls()
         if toml_path is not None:
             apply_toml(config, Path(toml_path))
         apply_env(config)
+        logger.debug("Config.load() retourne | configuration construite")
         return config
 
     @classmethod
@@ -165,8 +167,10 @@ def _validate_toml_table(data: dict, name: str, known_keys: frozenset[str]) -> d
     - une clé de `data[name]` n'appartient pas à `known_keys` (ex: `hots`
       au lieu de `host` sous `[hep]`).
     """
+    logger.debug("_validate_toml_table() appelée | table={}", name)
     value = data.get(name, {})
     if not isinstance(value, dict):
+        logger.error(_("_validate_toml_table() : [{}] n'est pas une table TOML"), name)
         raise ConfigError(
             _(
                 "[{name}] doit être une table TOML (ex: '[{name}]' suivi de "
@@ -176,6 +180,9 @@ def _validate_toml_table(data: dict, name: str, known_keys: frozenset[str]) -> d
         )
     unknown = set(value) - known_keys
     if unknown:
+        logger.error(
+            _("_validate_toml_table() : clés inconnues sous [{}] : {}"), name, sorted(unknown)
+        )
         raise ConfigError(
             _(
                 "clé(s) TOML inconnue(s) sous [{name}] : {unknown} "
@@ -185,10 +192,12 @@ def _validate_toml_table(data: dict, name: str, known_keys: frozenset[str]) -> d
                 name=name, unknown=", ".join(sorted(unknown)), valid=", ".join(sorted(known_keys))
             )
         )
+    logger.debug("_validate_toml_table() retourne | table [{}] validée", name)
     return value
 
 
 def _apply_toml_capture(config: Config, cap: dict) -> None:
+    logger.debug("_apply_toml_capture() appelée | {} clé(s)", len(cap))
     if "interface" in cap:
         config.capture.interface = cap["interface"]
     if "pcap" in cap:
@@ -203,9 +212,11 @@ def _apply_toml_capture(config: Config, cap: dict) -> None:
         config.capture.tshark_path = cap["tshark_path"]
     if "pcap_retime" in cap:
         config.capture.pcap_retime = bool(cap["pcap_retime"])
+    logger.debug("_apply_toml_capture() retourne | table capture appliquée")
 
 
 def _apply_toml_hep(config: Config, hep: dict) -> None:
+    logger.debug("_apply_toml_hep() appelée | {} clé(s)", len(hep))
     if "host" in hep:
         config.hep.host = hep["host"]
     if "port" in hep:
@@ -232,6 +243,7 @@ def _apply_toml_hep(config: Config, hep: dict) -> None:
         config.hep.send_retries = int(hep["send_retries"])
     if "send_retry_backoff" in hep:
         config.hep.send_retry_backoff = float(hep["send_retry_backoff"])
+    logger.debug("_apply_toml_hep() retourne | table hep appliquée")
 
 
 def apply_toml(config: Config, toml_path: Path) -> None:
@@ -252,6 +264,7 @@ def apply_toml(config: Config, toml_path: Path) -> None:
     statements par fonction (ruff PLR0915) — le nombre de champs ne cesse de
     croître au fil des fonctionnalités.
     """
+    logger.debug("apply_toml() appelée | chemin={}", toml_path.name)
     if not toml_path.exists():
         logger.debug("fichier de config TOML introuvable, ignoré : {}", toml_path)
         return
@@ -260,6 +273,9 @@ def apply_toml(config: Config, toml_path: Path) -> None:
 
     unknown_top_level = set(data) - _KNOWN_TOML_TABLES
     if unknown_top_level:
+        logger.error(
+            _("apply_toml() : entrées inconnues au premier niveau : {}"), sorted(unknown_top_level)
+        )
         raise ConfigError(
             _(
                 "entrée(s) inconnue(s) au premier niveau du TOML : "
@@ -297,10 +313,11 @@ def _env_bool(value: str) -> bool:
     return value.strip().lower() in ("1", "true", "yes", "on")
 
 
-def apply_env(config: Config) -> None:
+def apply_env(config: Config) -> None:  # noqa: PLR0915 — un `if` par variable d'environnement, les traces §8 (2 instructions) la font déborder de 2
     """Applique les variables d'environnement (préfixe OXOHEP_) sur un Config
     existant (in-place). Seules les variables réellement définies écrasent
     la valeur courante (TOML ou défaut)."""
+    logger.debug("apply_env() appelée")
     env = os.environ
 
     if v := env.get("OXOHEP_INTERFACE"):
@@ -361,3 +378,4 @@ def apply_env(config: Config) -> None:
 
     if v := env.get("OXOHEP_DRY_RUN"):
         config.dry_run = _env_bool(v)
+    logger.debug("apply_env() retourne | variables d'environnement appliquées")

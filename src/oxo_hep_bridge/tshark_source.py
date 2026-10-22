@@ -39,22 +39,29 @@ def parse_ek_line(line: str) -> dict[str, Any] | None:
     Retourne le dict `layers` du paquet, ou None pour les lignes d'action
     d'index ({"index":{...}}) ou les lignes vides/malformées.
     """
+    logger.trace("parse_ek_line() appelée")
     line = line.strip()
     if not line:
+        logger.trace("parse_ek_line() retourne | None (ligne vide)")
         return None
     try:
         obj = json.loads(line)
     except json.JSONDecodeError:
         logger.warning(_("Ligne non-JSON ignorée : {!r}"), line[:80])
+        logger.trace("parse_ek_line() retourne | None (JSON invalide)")
         return None
     if not isinstance(obj, dict):
+        logger.trace("parse_ek_line() retourne | None (non-objet)")
         return None
     # ligne d'action bulk → on l'ignore
     if "index" in obj and "layers" not in obj:
+        logger.trace("parse_ek_line() retourne | None (action d'index)")
         return None
     layers = obj.get("layers")
     if not isinstance(layers, dict):
+        logger.trace("parse_ek_line() retourne | None (layers absent)")
         return None
+    logger.trace("parse_ek_line() retourne | layers du paquet")
     return layers
 
 
@@ -64,6 +71,7 @@ def flatten_layers(layers: dict[str, Any]) -> dict[str, Any]:
     Les valeurs sont laissées telles quelles (listes ou scalaires) ; le
     normaliseur saura extraire le premier élément via pick().
     """
+    logger.trace("flatten_layers() appelée")
     flat: dict[str, Any] = {}
     for fields in layers.values():
         if not isinstance(fields, dict):
@@ -72,6 +80,7 @@ def flatten_layers(layers: dict[str, Any]) -> dict[str, Any]:
             if key == "text":
                 continue
             flat[key] = val
+    logger.trace("flatten_layers() retourne | {} champ(s) aplati(s)", len(flat))
     return flat
 
 
@@ -89,7 +98,9 @@ class TsharkEKSource:
         decode_as: list[str] | None = None,
         line_buffered: bool = True,
     ) -> None:
+        logger.debug("TsharkEKSource.__init__() appelée | interface={} pcap={}", interface, pcap)
         if not interface and not pcap:
+            logger.error(_("TsharkEKSource.__init__() : interface ou pcap requis"))
             raise ValueError(_("interface ou pcap requis"))
         self.tshark_path = tshark_path
         self.interface = interface
@@ -98,8 +109,10 @@ class TsharkEKSource:
         self.fields = fields or []
         self.decode_as = decode_as or []
         self.line_buffered = line_buffered
+        logger.debug("TsharkEKSource.__init__() retourne | source prête")
 
     def _build_cmd(self) -> list[str]:
+        logger.debug("_build_cmd() appelée")
         cmd = [self.tshark_path, "-T", "ek"]
         if self.line_buffered:
             cmd.append("-l")
@@ -113,6 +126,10 @@ class TsharkEKSource:
             cmd += ["-d", da]
         for f in self.fields:
             cmd += ["-e", f]
+        logger.debug(
+            "_build_cmd() retourne | commande tshark construite ({} champ(s) extraits)",
+            len(self.fields),
+        )
         return cmd
 
     def iter_packets(self) -> Iterator[dict[str, Any]]:
@@ -125,6 +142,7 @@ class TsharkEKSource:
         `TsharkError` est levée pour signaler une panne réelle plutôt que de
         continuer silencieusement.
         """
+        logger.debug("iter_packets() appelée | itération des paquets")
         cmd = self._build_cmd()
         logger.debug("lancement tshark : {}", " ".join(cmd))
         proc = subprocess.Popen(  # noqa: S603
@@ -136,22 +154,27 @@ class TsharkEKSource:
         )
         # drainer stderr en arrière-plan pour éviter deadlock
         stderr_lines: list[str] = []
+        logger.debug("iter_packets() retourne | itérateur prêt")
 
         def _drain_stderr() -> None:
+            logger.trace("_drain_stderr() appelée")
             if proc.stderr is None:
                 # Invariant garanti par Popen(stderr=subprocess.PIPE)
                 # ci-dessus. Exception explicite plutôt qu'un assert
                 # (supprimé sous python -O), même choix que pour
                 # proc.stdout ci-dessous et pour WatchdogScheduler._run()
                 # dans sdnotify.py.
+                logger.error(_("_drain_stderr() : proc.stderr est None malgré stderr=PIPE"))
                 raise RuntimeError(_("proc.stderr est None malgré stderr=PIPE"))
             for raw in proc.stderr:
                 stderr_lines.append(raw.rstrip())
+            logger.trace("_drain_stderr() retourne | stderr drainé")
 
         t = threading.Thread(target=_drain_stderr, daemon=True)
         t.start()
 
         if proc.stdout is None:
+            logger.error(_("iter_packets() : proc.stdout est None malgré stdout=PIPE"))
             raise RuntimeError(_("proc.stdout est None malgré stdout=PIPE"))
         we_interrupted = False
         try:
@@ -159,7 +182,8 @@ class TsharkEKSource:
                 layers = parse_ek_line(line)
                 if layers is not None:
                     yield flatten_layers(layers)
-        except (GeneratorExit, KeyboardInterrupt):
+        except (GeneratorExit, KeyboardInterrupt) as exc:
+            logger.debug("iter_packets() : itération interrompue : {}", exc)
             we_interrupted = True
             raise
         finally:
@@ -185,4 +209,6 @@ class TsharkEKSource:
                 for msg in stderr_lines[-5:]:
                     logger.warning(_("tshark stderr : {}"), msg)
             if rc not in (0, None) and not we_interrupted:
+                logger.error(_("iter_packets() : tshark s'est terminé avec le code {}"), rc)
                 raise TsharkError(_("tshark s'est terminé avec le code {rc}").format(rc=rc))
+            logger.debug("iter_packets() retourne | itération terminée")

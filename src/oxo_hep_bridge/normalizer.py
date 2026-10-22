@@ -53,8 +53,10 @@ def normalize(
     un JSON structuré (uaudp, endpoints, qos, correlation_id, raw_selected)
     plutôt qu'un déversement brut des champs tshark.
     """
+    logger.trace("normalize() appelée | agent={}", capture_agent_id)
     payload = encode_semantic_payload(flat)
     if payload is None:
+        logger.trace("normalize() retourne | None (aucune donnée UA)")
         return None
 
     ip_family = IPV6 if "ipv6_ipv6_src" in flat else IPV4
@@ -70,6 +72,7 @@ def normalize(
     if not correlation_id:
         correlation_id = build_correlation_id(flat)
 
+    logger.trace("normalize() retourne | paquet HEP construit")
     return HepPacket(
         ip_family=ip_family,
         ip_proto=ip_proto,
@@ -97,6 +100,7 @@ def _split_epoch(epoch_str: str) -> tuple[int, int]:
     6 chiffres (microsecondes) avant de parser, car datetime.fromisoformat
     n'accepte que jusqu'à 6 chiffres de fraction de seconde.
     """
+    logger.trace("_split_epoch() appelée")
     try:
         s = epoch_str.strip()
         if len(s) > 27:
@@ -106,4 +110,6 @@ def _split_epoch(epoch_str: str) -> tuple[int, int]:
     except (ValueError, TypeError):
         logger.warning(_("timestamp tshark invalide {!r}, fallback now"), epoch_str)
         dt = datetime.now(UTC)
-    return int(dt.timestamp()), dt.microsecond
+    decoupage = (int(dt.timestamp()), dt.microsecond)
+    logger.trace("_split_epoch() retourne | timestamp découpé")
+    return decoupage

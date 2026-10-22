@@ -27,6 +27,7 @@ from oxo_hep_bridge.sender import TRANSPORTS
 
 
 def build_parser() -> argparse.ArgumentParser:
+    logger.debug("build_parser() appelée")
     p = argparse.ArgumentParser(
         prog="oxo-hep-bridge",
         description=_("Pont Alcatel OXO (UAUDP/UA3G/NOE) vers HOMER via tshark -T ek + HEPv3"),
@@ -195,11 +196,13 @@ def build_parser() -> argparse.ArgumentParser:
             )
         ),
     )
+    logger.debug("build_parser() retourne | parseur CLI construit")
     return p
 
 
 def _apply_cli_args(config: Config, args: argparse.Namespace) -> None:
     """Applique uniquement les arguments CLI explicitement fournis (non-None)."""
+    logger.debug("_apply_cli_args() appelée")
     if args.interface is not None:
         config.capture.interface = args.interface
     if args.pcap is not None:
@@ -259,9 +262,11 @@ def _apply_cli_args(config: Config, args: argparse.Namespace) -> None:
 
     # --dry-run est un bool flag (présent => True, absent => False)
     config.dry_run = args.dry_run or config.dry_run
+    logger.debug("_apply_cli_args() retourne | arguments CLI appliqués")
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(argv: list[str] | None = None) -> int:  # noqa: PLR0915 — chaîne d'usage étroitement séquentielle, les traces §8 (2 instructions) la font déborder de 2
+    logger.debug("main() appelée | argv={}", argv)
     args = build_parser().parse_args(argv)
 
     # Charger le TOML + les variables d'environnement. Erreur explicite (pas
@@ -277,9 +282,11 @@ def main(argv: list[str] | None = None) -> int:
         config = Config.load(toml_path=args.config)
     except ConfigError as exc:
         logger.error(_("configuration TOML invalide ({}) : {}"), args.config, exc)
+        logger.debug("main() retourne | 2 (TOML invalide)")
         return 2
     except tomllib.TOMLDecodeError as exc:
         logger.error(_("fichier TOML syntaxiquement invalide ({}) : {}"), args.config, exc)
+        logger.debug("main() retourne | 2 (TOML non analysable)")
         return 2
 
     # Surcharge par les arguments CLI explicites uniquement
@@ -371,18 +378,23 @@ def main(argv: list[str] | None = None) -> int:
     notifier.ready()
 
     try:
-        return bridge.run()
+        code = bridge.run()
     except KeyboardInterrupt:
         logger.warning(_("Arrêt demandé (SIGINT/SIGTERM), fermeture du subprocess tshark..."))
+        logger.debug("main() retourne | 130 (SIGINT/SIGTERM)")
         return 130
     except Exception as exc:
         logger.exception(_("Erreur fatale pendant l'exécution : {}"), exc)
+        logger.debug("main() retourne | 1 (erreur fatale)")
         return 1
     finally:
         notifier.stopping()
         watchdog.stop()
         for sig, handler in original_handlers.items():
             signal.signal(sig, handler)
+        logger.debug("main() retourne | arrêt propre effectué")
+    logger.debug("main() retourne | {} (fin du run)", code)
+    return code
 
 
 if __name__ == "__main__":

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: oxo-hep-bridge\n"
 "Report-Msgid-Bugs-To: https://github.com/Mathilde-Team/OxoHepBridge/issues\n"
-"POT-Creation-Date: 2026-10-10 21:09+0000\n"
+"POT-Creation-Date: 2026-10-22 06:59+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -142,8 +142,16 @@ msgid "Erreur fatale pendant l'exécution : {}"
 msgstr ""
 
 #: src/oxo_hep_bridge/config.py
+msgid "_validate_toml_table() : [{}] n'est pas une table TOML"
+msgstr ""
+
+#: src/oxo_hep_bridge/config.py
 #, python-brace-format
 msgid "[{name}] doit être une table TOML (ex: '[{name}]' suivi de 'clé = valeur' sur les lignes suivantes) ; trouvé {type} — clé placée hors de sa section [{name}] ?"
+msgstr ""
+
+#: src/oxo_hep_bridge/config.py
+msgid "_validate_toml_table() : clés inconnues sous [{}] : {}"
 msgstr ""
 
 #: src/oxo_hep_bridge/config.py
@@ -152,8 +160,16 @@ msgid "clé(s) TOML inconnue(s) sous [{name}] : {unknown} (clés valides : {vali
 msgstr ""
 
 #: src/oxo_hep_bridge/config.py
+msgid "apply_toml() : entrées inconnues au premier niveau : {}"
+msgstr ""
+
+#: src/oxo_hep_bridge/config.py
 #, python-brace-format
 msgid "entrée(s) inconnue(s) au premier niveau du TOML : {unknown} (sections valides : {valid}) — clé écrite hors de sa section [table] ? (ex: 'host = ...' doit être sous [hep])"
+msgstr ""
+
+#: src/oxo_hep_bridge/hep.py
+msgid "_encode_inet() : IPv6 fournie mais ip_family={}"
 msgstr ""
 
 #: src/oxo_hep_bridge/hep.py
@@ -162,8 +178,16 @@ msgid "IPv6 fournie mais ip_family={family}"
 msgstr ""
 
 #: src/oxo_hep_bridge/hep.py
+msgid "_encode_inet() : IPv4 fournie mais ip_family={}"
+msgstr ""
+
+#: src/oxo_hep_bridge/hep.py
 #, python-brace-format
 msgid "IPv4 fournie mais ip_family={family}"
+msgstr ""
+
+#: src/oxo_hep_bridge/hep.py
+msgid "decode() : paquet trop court pour un en-tête HEPv3"
 msgstr ""
 
 #: src/oxo_hep_bridge/hep.py
@@ -171,7 +195,15 @@ msgid "Paquet trop court pour un en-tête HEPv3"
 msgstr ""
 
 #: src/oxo_hep_bridge/hep.py
+msgid "decode() : magic HEP3 attendu, reçu {!r}"
+msgstr ""
+
+#: src/oxo_hep_bridge/hep.py
 msgid "Magic HEP3 attendu, reçu {magic!r}"
+msgstr ""
+
+#: src/oxo_hep_bridge/hep.py
+msgid "decode() : longueur annoncée {} ≠ {}"
 msgstr ""
 
 #: src/oxo_hep_bridge/hep.py
@@ -180,7 +212,15 @@ msgid "Longueur totale annoncée {announced} ≠ {actual}"
 msgstr ""
 
 #: src/oxo_hep_bridge/hep.py
+msgid "decode() : en-tête de chunk tronqué"
+msgstr ""
+
+#: src/oxo_hep_bridge/hep.py
 msgid "En-tête de chunk tronqué"
+msgstr ""
+
+#: src/oxo_hep_bridge/hep.py
+msgid "decode() : longueur de chunk invalide {}"
 msgstr ""
 
 #: src/oxo_hep_bridge/hep.py
@@ -201,6 +241,10 @@ msgid "échec d'envoi de la notification sd_notify {!r} : {}"
 msgstr ""
 
 #: src/oxo_hep_bridge/sdnotify.py
+msgid "_run() : _notify_every ne devrait jamais être None ici"
+msgstr ""
+
+#: src/oxo_hep_bridge/sdnotify.py
 msgid "_notify_every ne devrait jamais être None ici (voir enabled/start())"
 msgstr ""
 
@@ -217,6 +261,10 @@ msgid "[dry-run] HEP encoded ({} octets{}) proto_type={} correlation_id={!r}"
 msgstr ""
 
 #: src/oxo_hep_bridge/sender.py
+msgid "make_sender() : transport HEP inconnu {!r}"
+msgstr ""
+
+#: src/oxo_hep_bridge/sender.py
 msgid "transport HEP inconnu : {transport!r} (attendu : {expected})"
 msgstr ""
 
@@ -225,11 +273,23 @@ msgid "Ligne non-JSON ignorée : {!r}"
 msgstr ""
 
 #: src/oxo_hep_bridge/tshark_source.py
+msgid "TsharkEKSource.__init__() : interface ou pcap requis"
+msgstr ""
+
+#: src/oxo_hep_bridge/tshark_source.py
 msgid "interface ou pcap requis"
 msgstr ""
 
 #: src/oxo_hep_bridge/tshark_source.py
+msgid "_drain_stderr() : proc.stderr est None malgré stderr=PIPE"
+msgstr ""
+
+#: src/oxo_hep_bridge/tshark_source.py
 msgid "proc.stderr est None malgré stderr=PIPE"
+msgstr ""
+
+#: src/oxo_hep_bridge/tshark_source.py
+msgid "iter_packets() : proc.stdout est None malgré stdout=PIPE"
 msgstr ""
 
 #: src/oxo_hep_bridge/tshark_source.py
@@ -246,6 +306,10 @@ msgstr ""
 
 #: src/oxo_hep_bridge/tshark_source.py
 msgid "tshark stderr : {}"
+msgstr ""
+
+#: src/oxo_hep_bridge/tshark_source.py
+msgid "iter_packets() : tshark s'est terminé avec le code {}"
 msgstr ""
 
 #: src/oxo_hep_bridge/tshark_source.py

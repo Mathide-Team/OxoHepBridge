@@ -43,6 +43,7 @@ def build_keepalive_packet(
     côté collecteur. Les adresses IP/ports sont neutres (0.0.0.0:0) puisque ce
     paquet ne représente aucun flux réseau réel.
     """
+    logger.debug("build_keepalive_packet() appelée | intervalle={}s", interval)
     now = datetime.now(UTC)
     payload = {
         "type": "keepalive",
@@ -50,6 +51,7 @@ def build_keepalive_packet(
         "capture_agent_id": capture_agent_id,
         "interval_seconds": interval,
     }
+    logger.debug("build_keepalive_packet() retourne | paquet keepalive construit")
     return HepPacket(
         ip_family=IPV4,
         src_ip="0.0.0.0",  # noqa: S104 -- neutre, voir docstring (aucun flux réel)
@@ -86,6 +88,7 @@ class KeepaliveScheduler:
         auth_key: str | None = None,
         node_name: str | None = None,
     ) -> None:
+        logger.debug("KeepaliveScheduler.__init__() appelée | intervalle={}s", interval)
         self.sender = sender
         self.interval = interval
         self.capture_agent_id = capture_agent_id
@@ -95,12 +98,16 @@ class KeepaliveScheduler:
         self._stop_event = threading.Event()
         self._thread: threading.Thread | None = None
         self.sent_count = 0
+        logger.debug(
+            "KeepaliveScheduler.__init__() retourne | planificateur prêt (intervalle={}s)", interval
+        )
 
     @property
     def enabled(self) -> bool:
         return self.interval > 0
 
     def _build_packet(self) -> HepPacket:
+        logger.trace("_build_packet() retourne | paquet keepalive")
         return build_keepalive_packet(
             capture_agent_id=self.capture_agent_id,
             interval=self.interval,
@@ -113,6 +120,7 @@ class KeepaliveScheduler:
         # Le premier keepalive est envoyé après un intervalle complet (pas au
         # démarrage) : le tout premier paquet réel du run fait déjà foi que
         # l'agent est vivant.
+        logger.debug("_run() appelée | boucle keepalive démarrée")
         while not self._stop_event.wait(self.interval):
             packet = self._build_packet()
             if self.sender.send(packet):
@@ -122,18 +130,25 @@ class KeepaliveScheduler:
                 )
             else:
                 logger.warning(_("échec d'envoi du keepalive HEP"))
+        logger.debug("_run() retourne | boucle keepalive arrêtée")
 
     def start(self) -> None:
+        logger.debug("start() appelée | activé={}", self.enabled)
         if not self.enabled or self._thread is not None:
+            logger.debug("start() retourne | non démarré (désactivé ou déjà lancé)")
             return
         self._stop_event.clear()
         self._thread = threading.Thread(target=self._run, name="oxo-hep-keepalive", daemon=True)
         self._thread.start()
         logger.debug("keepalive HEP démarré (intervalle={}s)", self.interval)
+        logger.debug("start() retourne | thread keepalive lancé")
 
     def stop(self, *, timeout: float = 5.0) -> None:
+        logger.debug("stop() appelée | délai={}", timeout)
         if self._thread is None:
+            logger.debug("stop() retourne | aucun thread à arrêter")
             return
         self._stop_event.set()
         self._thread.join(timeout=timeout)
         self._thread = None
+        logger.debug("stop() retourne | thread keepalive arrêté")
