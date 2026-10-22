@@ -36,6 +36,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from loguru import logger
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 PACKAGE_DIR = REPO_ROOT / "src" / "oxo_hep_bridge"
 LANG_DIR = REPO_ROOT / "lang"
@@ -54,26 +56,35 @@ class I18nError(RuntimeError):
 
 
 def _run(cmd: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
+    logger.debug("_run() appelée | outil={}", cmd[0])
     if shutil.which(cmd[0]) is None:
+        logger.error("_run() : {} introuvable (gettext absent)", cmd[0])
         raise I18nError(f"{cmd[0]} introuvable : installez gettext (apt-get install gettext)")
     # Outils gettext du système, arguments construits ici (pas d'entrée externe).
-    return subprocess.run(cmd, check=False, capture_output=True, text=True, **kwargs)  # noqa: S603
+    resultat = subprocess.run(cmd, check=False, capture_output=True, text=True, **kwargs)  # noqa: S603
+    logger.debug("_run() retourne | code={}", resultat.returncode)
+    return resultat
 
 
 def _checked(cmd: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
+    logger.debug("_checked() appelée | outil={}", cmd[0])
     result = _run(cmd, **kwargs)
     if result.returncode != 0:
+        logger.error("_checked() : {} a échoué", cmd[0])
         raise I18nError(f"{' '.join(cmd)} : {result.stderr.strip()}")
+    logger.debug("_checked() retourne | {}", cmd[0])
     return result
 
 
 def linguas(path: Path | None = None) -> list[str]:
     """Langues déclarées dans ``lang/LINGUAS`` (ordre conservé, sans doublon)."""
+    logger.debug("linguas() appelée")
     seen: list[str] = []
     for line in (path or LINGUAS_PATH).read_text(encoding="utf-8").splitlines():
         for code in line.split("#", 1)[0].split():
             if code not in seen:
                 seen.append(code)
+    logger.debug("linguas() retourne | {} langue(s)", len(seen))
     return seen
 
 
@@ -88,6 +99,7 @@ def generate_pot(output: Path) -> Path:
     """xgettext -> ``output`` (emplacements par fichier, sans numéro de
     ligne : une édition du code ne rend pas le .pot obsolète si les chaînes
     ne changent pas)."""
+    logger.debug("generate_pot() appelée | sortie={}", output.name)
     cmd = [
         "xgettext",
         "--language=Python",
@@ -104,9 +116,11 @@ def generate_pot(output: Path) -> Path:
         str(output),
         *[str(p) for p in source_files()],
     ]
+    logger.debug("generate_pot() appelée | sortie={}", output.name)
     _checked(cmd, cwd=REPO_ROOT)
     text = output.read_text(encoding="utf-8").replace("charset=CHARSET", "charset=UTF-8")
     output.write_text(text, encoding="utf-8")
+    logger.debug("generate_pot() retourne | modèle écrit")
     return output
 
 
@@ -121,23 +135,29 @@ def _replace_if_changed(new: Path, target: Path) -> bool:
     """Remplace ``target`` par ``new`` seulement si le contenu des messages
     a changé (dates d'en-tête ignorées) : un ``update`` sans changement de
     chaîne ne produit aucun diff dans git."""
+    logger.debug("_replace_if_changed() appelée | cible={}", target.name)
     if target.exists() and _normalized(target.read_text(encoding="utf-8")) == _normalized(
         new.read_text(encoding="utf-8")
     ):
         new.unlink()
+        logger.debug("_replace_if_changed() retourne | False (inchangé)")
         return False
     new.replace(target)
+    logger.debug("_replace_if_changed() retourne | True (remplacé)")
     return True
 
 
 def extract() -> Path:
+    logger.debug("extract() appelée")
     LANG_DIR.mkdir(exist_ok=True)
     fresh = generate_pot(POT_PATH.with_suffix(".pot.new"))
     _replace_if_changed(fresh, POT_PATH)
+    logger.debug("extract() retourne | modèle POT")
     return POT_PATH
 
 
 def _new_po(lang: str, po: Path) -> None:
+    logger.debug("_new_po() appelée | langue={}", lang)
     """Nouveau catalogue vide (en-tête et Plural-Forms par msginit).
 
     msginit pré-remplit les catalogues anglais avec le msgid : la langue
@@ -170,9 +190,11 @@ def _new_po(lang: str, po: Path) -> None:
             "cat >/dev/null",
         ]
     )
+    logger.debug("_new_po() retourne | catalogue {} créé", lang)
 
 
 def _merge(po: Path, pot: Path, output: Path) -> None:
+    logger.debug("_merge() appelée | po={}", po.name)
     _checked(
         [
             "msgmerge",
@@ -186,10 +208,12 @@ def _merge(po: Path, pot: Path, output: Path) -> None:
             str(pot),
         ]
     )
+    logger.debug("_merge() retourne | catalogue fusionné")
 
 
 def update() -> list[str]:
     """extract + msgmerge de chaque langue ; renvoie les langues créées."""
+    logger.debug("update() appelée")
     extract()
     created = []
     for lang in linguas():
@@ -200,6 +224,7 @@ def update() -> list[str]:
         merged = po.with_suffix(".po.new")
         _merge(po, POT_PATH, merged)
         _replace_if_changed(merged, po)
+    logger.debug("update() retourne | {} langue(s) créée(s)", len(created))
     return created
 
 
@@ -208,12 +233,14 @@ def mo_path(lang: str, locale_dir: Path | None = None) -> Path:
 
 
 def compile_catalogs(locale_dir: Path | None = None) -> list[Path]:
+    logger.debug("compile_catalogs() appelée")
     written = []
     for lang in linguas():
         target = mo_path(lang, locale_dir)
         target.parent.mkdir(parents=True, exist_ok=True)
         _checked(["msgfmt", "--check", f"--output-file={target}", str(LANG_DIR / f"{lang}.po")])
         written.append(target)
+    logger.debug("compile_catalogs() retourne | {} catalogue(s) compilé(s)", len(written))
     return written
 
 
@@ -234,6 +261,7 @@ _STATS = re.compile(r"(\d+) (translated|untranslated|fuzzy)")
 
 
 def catalog_stats(lang: str) -> CatalogStats:
+    logger.debug("catalog_stats() appelée | langue={}", lang)
     po = LANG_DIR / f"{lang}.po"
     result = _run(
         ["msgfmt", "--check", "--statistics", "--output-file=/dev/null", str(po)],
@@ -242,11 +270,13 @@ def catalog_stats(lang: str) -> CatalogStats:
     stats = CatalogStats(lang, ok=result.returncode == 0)
     for count, kind in _STATS.findall(result.stderr):
         setattr(stats, kind, int(count))
+    logger.debug("catalog_stats() retourne | ok={}", stats.ok)
     return stats
 
 
 def check() -> list[str]:
     """Liste des problèmes (vide = tout est cohérent)."""
+    logger.debug("check() appelée")
     problems: list[str] = []
     declared = linguas()
     present = sorted(p.stem for p in LANG_DIR.glob("*.po"))
@@ -288,10 +318,12 @@ def check() -> list[str]:
                 problems.append(
                     f"{lang} : {target.name} de {lang} périmé ou absent (lancez compile)"
                 )
+    logger.debug("check() retourne | {} problème(s)", len(problems))
     return problems
 
 
 def report(markdown: bool = False) -> str:
+    logger.debug("report() appelée | markdown={}", markdown)
     rows = [catalog_stats(lang) for lang in linguas()]
     total_messages = max((r.total for r in rows), default=0)
     sums = {k: sum(getattr(r, k) for r in rows) for k in ("translated", "untranslated", "fuzzy")}
@@ -325,10 +357,13 @@ def report(markdown: bool = False) -> str:
             "",
             f"Catalogues valides :     {ok}/{len(rows)}",
         ]
-    return "\n".join(lines) + "\n"
+    rapport = "\n".join(lines) + "\n"
+    logger.debug("report() retourne | {} ligne(s)", len(lines))
+    return rapport
 
 
 def main(argv: list[str] | None = None) -> int:
+    logger.debug("main() appelée | argv={}", argv)
     parser = argparse.ArgumentParser(prog="tools/i18n.py", description=__doc__.split("\n\n")[0])
     sub = parser.add_subparsers(dest="command", required=True)
     for name in ("extract", "update", "compile", "check"):
@@ -352,13 +387,16 @@ def main(argv: list[str] | None = None) -> int:
             for problem in problems:
                 print(f"ERREUR {problem}", file=sys.stderr)
             if problems:
+                logger.error("main() : {} problème(s) de catalogue", len(problems))
                 return 1
             print(f"catalogues cohérents : {len(linguas())}")
         else:
             sys.stdout.write(report(markdown=args.markdown))
     except I18nError as exc:
         print(f"ERREUR {exc}", file=sys.stderr)
+        logger.debug("main() retourne | 2 (erreur d'outillage)")
         return 2
+    logger.debug("main() retourne | 0")
     return 0
 
 

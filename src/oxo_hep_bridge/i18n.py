@@ -20,6 +20,8 @@ from __future__ import annotations
 import gettext
 from pathlib import Path
 
+from loguru import logger
+
 DOMAIN = "oxo-hep-bridge"
 LOCALE_DIR = Path(__file__).resolve().parent / "locale"
 
@@ -38,6 +40,7 @@ def install(
     Sans argument, relit l'environnement courant ; ``languages`` force
     une liste de langues (ex. ``["de_DE"]``) comme ``LANGUAGE``.
     """
+    logger.debug("install() appelée | langages={}", languages)
     translation = gettext.translation(
         DOMAIN,
         localedir=Path(localedir) if localedir is not None else LOCALE_DIR,
@@ -45,6 +48,7 @@ def install(
         fallback=True,
     )
     _state["translation"] = translation
+    logger.debug("install() retourne | catalogue (re)chargé")
     return translation
 
 

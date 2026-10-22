@@ -13,7 +13,7 @@ ce document n'y renvoie que pour ne pas dupliquer.
 le sandbox de la session 45 ; `tshark` réel, lui, l'était — installable
 sans sudo, ce sandbox tournant en root ; le nombre de skips varie avec
 l'environnement d'exécution, pas le nombre total de tests), **couverture
-99,46 %** (seuil CI 80 %), `mypy`/`ruff check`/`ruff format --check` verts
+99,46 %** (seuil CI 95 %), `mypy`/`ruff check`/`ruff format --check` verts
 — chiffres de la session 45, vérifiés par une exécution réelle de la
 suite.
 

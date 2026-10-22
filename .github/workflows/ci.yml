@@ -44,10 +44,10 @@ jobs:
         run: uv run mypy
 
       - name: Tests (pytest + couverture)
-        # Seuil minimal 80 % (même valeur que `make test-cov`, vérifié par
-        # tests/test_ci_config.py). Les tests tshark réels se sautent
+        # Seuil minimal 95 %, règle d'équipe Mathilde-Team/.github#9 (même
+        # valeur que `make test-cov`, vérifié par tests/test_ci_config.py). Les tests tshark réels se sautent
         # proprement si tshark est absent de l'environnement d'exécution.
-        run: uv run pytest --cov=oxo_hep_bridge --cov-report=term-missing --cov-report=xml --cov-fail-under=80
+        run: uv run pytest --cov=oxo_hep_bridge --cov-report=term-missing --cov-report=xml --cov-fail-under=95
 
       - name: Publication du rapport de couverture (artifact)
         # coverage.xml (format Cobertura) produit par l'étape pytest --cov ;

@@ -47,7 +47,7 @@ test:
 	@$(PYTEST) -ra
 
 test-cov:
-	@$(PYTEST) --cov=oxo_hep_bridge --cov-report=term-missing --cov-fail-under=80
+	@$(PYTEST) --cov=oxo_hep_bridge --cov-report=term-missing --cov-fail-under=95
 
 # Archive de livraison horodatée (dist/oxo-hep-bridge-{timestamp}.zip) —
 # ne jamais reconstruire ce zip à la main avec `zip -x`, voir

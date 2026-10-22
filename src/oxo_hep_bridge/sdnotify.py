@@ -59,16 +59,20 @@ class SdNotifier:
     """
 
     def __init__(self, socket_path: str | None = None) -> None:
+        logger.debug("SdNotifier.__init__() appelée | chemin explicite={}", socket_path is not None)
         self.socket_path = (
             socket_path if socket_path is not None else os.environ.get("NOTIFY_SOCKET")
         )
+        logger.debug("SdNotifier.__init__() retourne | notifieur configuré")
 
     @property
     def enabled(self) -> bool:
         return bool(self.socket_path)
 
     def _send(self, message: str) -> bool:
+        logger.debug("_send() appelée | type de notification systemd")
         if not self.socket_path:
+            logger.debug("_send() retourne | False (NOTIFY_SOCKET absent)")
             return False
         addr = self.socket_path
         # Espace de noms abstrait Linux : convention systemd/socket Unix, le
@@ -85,7 +89,9 @@ class SdNotifier:
                 sock.close()
         except OSError as exc:
             logger.warning(_("échec d'envoi de la notification sd_notify {!r} : {}"), message, exc)
+            logger.debug("_send() retourne | False (échec d'envoi)")
             return False
+        logger.debug("_send() retourne | True (notification envoyée)")
         return True
 
     def ready(self) -> bool:
@@ -119,20 +125,27 @@ def resolve_watchdog_interval(env: os._Environ[str] | dict[str, str] | None = No
       réellement surveillé par systemd ; vérification recommandée par la
       documentation `sd_notify(3)`.
     """
+    logger.debug("resolve_watchdog_interval() appelée")
     source = env if env is not None else os.environ
     raw = source.get("WATCHDOG_USEC")
     if not raw:
+        logger.debug("resolve_watchdog_interval() retourne | None (WATCHDOG_USEC absent)")
         return None
     pid_raw = source.get("WATCHDOG_PID")
     if pid_raw and pid_raw.isdigit() and int(pid_raw) != os.getpid():
+        logger.debug("resolve_watchdog_interval() retourne | None (PID surveillé différent)")
         return None
     try:
         usec = int(raw)
     except ValueError:
+        logger.debug("resolve_watchdog_interval() retourne | None (valeur non numérique)")
         return None
     if usec <= 0:
+        logger.debug("resolve_watchdog_interval() retourne | None (valeur négative ou nulle)")
         return None
-    return usec / 1_000_000
+    intervalle = usec / 1_000_000
+    logger.debug("resolve_watchdog_interval() retourne | {}s", intervalle)
+    return intervalle
 
 
 class WatchdogScheduler:
@@ -146,6 +159,7 @@ class WatchdogScheduler:
     """
 
     def __init__(self, notifier: SdNotifier, watchdog_interval: float | None) -> None:
+        logger.debug("WatchdogScheduler.__init__() appelée | intervalle={}", watchdog_interval)
         self.notifier = notifier
         self.watchdog_interval = watchdog_interval
         self._notify_every = (
@@ -154,18 +168,21 @@ class WatchdogScheduler:
         self._stop_event = threading.Event()
         self._thread: threading.Thread | None = None
         self.sent_count = 0
+        logger.debug("WatchdogScheduler.__init__() retourne | planificateur prêt")
 
     @property
     def enabled(self) -> bool:
         return self.notifier.enabled and self._notify_every is not None and self._notify_every > 0
 
     def _run(self) -> None:
+        logger.debug("_run() appelée | boucle watchdog démarrée")
         if self._notify_every is None:
             # Invariant garanti par enabled/start() ci-dessus : _run() n'est
             # jamais lancé sur un thread avec _notify_every à None. Exception
             # explicite plutôt qu'un assert (supprimé sous python -O) pour
             # satisfaire le narrowing mypy sans dépendre d'un mécanisme
             # désactivable à l'exécution.
+            logger.error(_("_run() : _notify_every ne devrait jamais être None ici"))
             raise RuntimeError(
                 _("_notify_every ne devrait jamais être None ici (voir enabled/start())")
             )
@@ -173,9 +190,12 @@ class WatchdogScheduler:
             if self.notifier.watchdog():
                 self.sent_count += 1
                 logger.debug("watchdog systemd notifié (#{})", self.sent_count)
+        logger.debug("_run() retourne | boucle watchdog arrêtée")
 
     def start(self) -> None:
+        logger.debug("start() appelée | activé={}", self.enabled)
         if not self.enabled or self._thread is not None:
+            logger.debug("start() retourne | non démarré (désactivé ou déjà lancé)")
             return
         self._stop_event.clear()
         self._thread = threading.Thread(target=self._run, name="oxo-hep-watchdog", daemon=True)
@@ -185,10 +205,14 @@ class WatchdogScheduler:
             self.watchdog_interval,
             self._notify_every,
         )
+        logger.debug("start() retourne | thread watchdog lancé")
 
     def stop(self, *, timeout: float = 5.0) -> None:
+        logger.debug("stop() appelée | délai={}", timeout)
         if self._thread is None:
+            logger.debug("stop() retourne | aucun thread à arrêter")
             return
         self._stop_event.set()
         self._thread.join(timeout=timeout)
         self._thread = None
+        logger.debug("stop() retourne | thread watchdog arrêté")

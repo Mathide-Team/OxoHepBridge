@@ -35,6 +35,8 @@ import json
 import socket
 import sys
 
+from loguru import logger
+
 from oxo_hep_bridge.hep import (
     ChunkType,
     decode,
@@ -73,28 +75,42 @@ def _decode_value(chunk_type: int, payload: bytes) -> object:  # noqa: PLR0911
     retournés comme chaîne décodée en UTF-8 (avec fallback hex) ; les
     entiers sont interprétés selon le type de chunk.
     """
+    logger.trace("_decode_value() appelée | chunk={:#06x}", chunk_type)
     if not payload:
+        logger.trace("_decode_value() retourne | vide")
         return ""
     if chunk_type == ChunkType.IP_PROTOCOL_FAMILY:
+        logger.trace("_decode_value() retourne | famille IP")
         return {2: "IPv4", 10: "IPv6"}.get(payload[0], payload[0])
     if chunk_type == ChunkType.IP_PROTOCOL_ID:
+        logger.trace("_decode_value() retourne | protocole IP")
         return {6: "TCP", 17: "UDP"}.get(payload[0], payload[0])
     if chunk_type == ChunkType.PROTOCOL_TYPE:
+        logger.trace("_decode_value() retourne | proto_type")
         return payload[0]
     if chunk_type in _IP_CHUNK_TYPES:
         # Le format (IPv4 vs IPv6) est déduit de la taille du payload : 4 octets
         # pour une adresse IPv4, 16 pour une adresse IPv6.
         family = socket.AF_INET6 if len(payload) == 16 else socket.AF_INET
         try:
-            return socket.inet_ntop(family, payload)
-        except (ValueError, OSError):
+            adresse = socket.inet_ntop(family, payload)
+        except (ValueError, OSError) as exc:
+            logger.trace("_decode_value() retourne | hex (adresse invalide : {})", exc)
             return payload.hex()
+        else:
+            logger.trace("_decode_value() retourne | adresse IP")
+            return adresse
     if chunk_type in _INT_CHUNK_TYPES:
+        logger.trace("_decode_value() retourne | entier")
         return int.from_bytes(payload, "big")
     try:
-        return payload.decode("utf-8")
+        texte = payload.decode("utf-8")
     except UnicodeDecodeError:
+        logger.trace("_decode_value() retourne | hex (non UTF-8)")
         return payload.hex()
+    else:
+        logger.trace("_decode_value() retourne | chaîne")
+        return texte
 
 
 def _decompress_payload(payload: bytes) -> str:
@@ -106,18 +122,25 @@ def _decompress_payload(payload: bytes) -> str:
     fallback hex déjà utilisé par `_decode_value()` pour les octet-string
     non-UTF-8.
     """
+    logger.trace("_decompress_payload() appelée | {} octet(s)", len(payload))
     try:
         raw = gzip.decompress(payload)
-    except OSError:
+    except OSError as exc:
+        logger.trace("_decompress_payload() retourne | hex (gzip invalide : {})", exc)
         return f"<gzip invalide ({len(payload)} octets bruts) : {payload.hex()}>"
     try:
-        return raw.decode("utf-8")
+        texte = raw.decode("utf-8")
     except UnicodeDecodeError:
+        logger.trace("_decompress_payload() retourne | hex (non UTF-8)")
         return raw.hex()
+    else:
+        logger.trace("_decompress_payload() retourne | texte décompressé")
+        return texte
 
 
 def summarize_packet(raw: bytes) -> dict:
     """Produit un résumé lisible d'un paquet HEPv3 brut."""
+    logger.trace("summarize_packet() appelée | {} octet(s)", len(raw))
     chunks = decode(raw)
     summary: dict[str, object] = {"chunks": len(chunks)}
     decoded_fields: dict[str, object] = {}
@@ -160,10 +183,12 @@ def summarize_packet(raw: bytes) -> dict:
     if isinstance(payload_data, str):
         summary["payload_bytes"] = len(payload_data.encode("utf-8"))
         summary["payload_preview"] = payload_data[:120]
+    logger.trace("summarize_packet() retourne | résumé construit")
     return summary
 
 
 def main(argv: list[str] | None = None) -> int:
+    logger.debug("main() appelée | argv={}", argv)
     parser = argparse.ArgumentParser(
         prog="hep_receiver",
         description="Récepteur HEPv3 de test pour oxo-hep-bridge (valide l'encodage par round-trip)",
@@ -198,6 +223,7 @@ def main(argv: list[str] | None = None) -> int:
             try:
                 summary = summarize_packet(data)
             except ValueError as exc:
+                logger.debug("main() : paquet invalide ignoré : {}", exc)
                 print(
                     json.dumps(
                         {"error": str(exc), "from": f"{addr[0]}:{addr[1]}", "raw_len": len(data)}
@@ -221,10 +247,12 @@ def main(argv: list[str] | None = None) -> int:
             else:
                 print(json.dumps(summary, ensure_ascii=False), flush=True)
             received += 1
-    except KeyboardInterrupt:
+    except KeyboardInterrupt as exc:
+        logger.debug("main() : arrêt demandé ({} paquet(s) reçus) : {}", received, exc)
         print(f"\nArrêt. {received} paquet(s) reçu(s).", file=sys.stderr, flush=True)
     finally:
         sock.close()
+    logger.debug("main() retourne | 0 (récepteur arrêté)")
     return 0
 
 

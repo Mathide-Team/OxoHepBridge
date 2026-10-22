@@ -56,6 +56,9 @@ ignore = ["PLR0913", "PLR2004", "E501", "PERF401", "PLR0912", "TRY003"]
 # du test (S108) ou le lancement de `tshark` par son nom simple (S607,
 # résolu via PATH — délibéré, voir `tshark_path` dans config.py).
 "tests/*" = ["PLR2004", "B017", "PLR0917", "S"]
+# Script d'audit partagé (copié du socle) : ses 8 returns explicites et son
+# appel `git` par nom simple sont inhérents à sa forme, pas des défauts.
+"scripts/audit_debug_sorties.py" = ["PLR0911", "S607"]
 
 [tool.mypy]
 python_version = "3.11"

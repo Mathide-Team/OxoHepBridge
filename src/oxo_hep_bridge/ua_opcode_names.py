@@ -122,6 +122,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from loguru import logger
+
 UAUDP_OPCODE_NAMES: dict[int, str] = {  # uaudp_opcode_str[] (packet-uaudp.c)
     0: "Connect",
     1: "Connect ACK",
@@ -750,13 +752,18 @@ def decode_name(table: dict[int, str], value: int | str | None) -> str | None:
     correspondance dans la table — jamais de valeur inventée ("unknown
     (0x..)" reste la responsabilité de l'appelant s'il le souhaite).
     """
+    logger.trace("decode_name() appelée")
     if value is None:
+        logger.trace("decode_name() retourne | None (valeur absente)")
         return None
     try:
         key = int(value, 0) if isinstance(value, str) else int(value)
     except (TypeError, ValueError):
+        logger.trace("decode_name() retourne | None (valeur non numérique)")
         return None
-    return table.get(key)
+    nom = table.get(key)
+    logger.trace("decode_name() retourne | {}", "résolu" if nom else "None")
+    return nom
 
 
 def decode_names(table: dict[int, str], value: Any) -> list[str | None] | None:
@@ -780,8 +787,12 @@ def decode_names(table: dict[int, str], value: Any) -> list[str | None] | None:
     None ou si aucun élément n'est résolvable : même contrat que
     ``decode_name``, pas de nom inventé.
     """
+    logger.trace("decode_names() appelée")
     if value is None:
+        logger.trace("decode_names() retourne | None (valeur absente)")
         return None
     items = value if isinstance(value, list) else [value]
     resolved = [decode_name(table, item) for item in items]
-    return resolved if any(name is not None for name in resolved) else None
+    liste = resolved if any(name is not None for name in resolved) else None
+    logger.trace("decode_names() retourne | {}", "liste alignée" if liste else "None")
+    return liste
